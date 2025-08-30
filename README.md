@@ -42,7 +42,7 @@ SHOOTINGSTAR_TOKEN = "Insert here your Discord Bot Token"
 > Keep in mind that a OAuth token is similar to a password: anyone that has it can act as your app and run whatever code they want. Same goes with your Discord token.
 
 ## Updates
-Version Beta: no release done yet, as the bot is still a WIP so far.
+**Version 1.0.0:** First release of the bot. So far, the bot is able to do basic moderation actions, as well as twitch actions and plan messages.
 
 ## Upcoming changes
 > [!NOTE]
