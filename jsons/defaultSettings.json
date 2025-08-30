@@ -1,0 +1,152 @@
+{
+  "defaultValues": {
+    "purgeAmount": {
+      "value": 10,
+      "type": "INT",
+      "description": "Default amount of messages to purge when no number is given."
+    },
+    "muteTime": {
+      "value": 10,
+      "type": "INT",
+      "description": "Default time to mute user (in minutes) when no number is given."
+    },
+    "banTime": {
+      "value": 5,
+      "type": "INT",
+      "description": "Default time to ban a user when no number is given. [WIP]"
+    }
+  },
+  "birthday": {
+    "enable": {
+      "value": true,
+      "type": "BOOL",
+      "description": "Defines if Shooting Star should celebrate birthdays or not! Disabling this also disables the commands linked to birthday!"
+    },
+    "channel": {
+      "value": null,
+      "type": "!CHANNEL",
+      "description": "Defines the channel in which Shooting Star should wish happy BDay. Setting this to null disables all bday wishes and make ponies sad :c"
+    }
+  },
+  "newcomers": {
+    "roles": {
+      "value": [],
+      "type": "[ROLE]",
+      "description": "List of roles to give a user when they join the server."
+    },
+    "welcoming": {
+      "channel": {
+        "value": null,
+        "type": "!CHANNEL",
+        "description": "Channel in which the welcoming message is going to be written. (if enabled)"
+      },
+      "message": {
+        "value": null,
+        "type": "!TEXT",
+        "description": "Message to be displayed on member join. If null, no message will be sent."
+      }
+    }
+  },
+  "logs": {
+    "channel": {
+      "value": null,
+      "type": "!CHANNEL",
+      "description": "Channel in which the logs will be output. Should usually be in a private channel, as those contain administrative actions"
+    },
+    "memberJoin": {
+      "value": false,
+      "type": "BOOL",
+      "description": "Set to true if logs should output new members in the server, otherwise set to false."
+    },
+    "memberUpdate": {
+      "value": false,
+      "type": "BOOL",
+      "description": "Set to true if logs should output members updates in the server, otherwise set to false."
+    },
+    "memberLeave": {
+      "value": false,
+      "type": "BOOL",
+      "description": "Set to true if logs should output members leaving the server, otherwise set to false."
+    },
+    "modActions": {
+      "value": false,
+      "type": "BOOL",
+      "description": "Set to true if logs should output mod actions (warns, mutes, kicks, bans), otherwise set to false."
+    }
+  },
+  "moderation": {
+    "member": {
+      "value": null,
+      "type": "!ROLE",
+      "description": "Role given to members. Useful to let them use commands"
+    },
+    "staff": {
+      "value": null,
+      "type": "!ROLE",
+      "description": "Role given to staff. Useful to let them use commands"
+    },
+    "admin": {
+      "value": null,
+      "type": "!ROLE",
+      "description": "Role given to admin. Useful to let them use commands"
+    },
+    "owner": {
+      "value": null,
+      "type": "!USER",
+      "description": "User ID of owner. Useful to let them use commands"
+    },
+    "muted": {
+      "value": null,
+      "type": "!ROLE",
+      "description": "Role to give a user to have them muted. This will not remove the 'member' role, you'll need to take care of permissions yourself."
+    },
+    "dmOnAction": {
+      "value": false,
+      "type": "BOOL",
+      "description": "Set to true if mod actions should send a DM to the offender, otherwise set to false"
+    },
+    "lockdownMode": {
+      "value": false,
+      "type": "BOOL",
+      "description": "Set to true to activate lockdown mode (also can be done with !lockdown): all new members will need to manually have the member role given to them to access the server."
+    }
+  },
+  "twitch": {
+    "channel": {
+      "value": null,
+      "type": "!INT",
+      "description": "Channel ID of the streamer used for twitch-related commands.",
+      "outputHandle": "showTwitchChannel",
+      "manualUpdate": "TwitchChannel"
+    },
+    "OAuth": {
+      "id": {
+        "value": null,
+        "type": "!TEXT",
+        "description": "ID of the OAuth used for the Twitch application."
+      },
+      "secret": {
+        "value": null,
+        "type": "!TEXT",
+        "description": "Secret of the OAuth used for the Twitch application."
+      }
+    },
+    "schedule": {
+      "maxLimit": {
+        "value": 20,
+        "type": "INT",
+        "description": "Maximum amount of stream to display when calling Schedule command. Must be between 1 - 25."
+      },
+      "perWeek": {
+        "value": true,
+        "type": "BOOL",
+        "description": "Displays only the schedule of this week. Can override maxLimit depending of amount of streams."
+      },
+      "automaticStatus": {
+        "value": false,
+        "type": "BOOL",
+        "description": "Defines if status should be automatically handled by the bot, showing next stream date."
+      }
+    }
+  }
+}
