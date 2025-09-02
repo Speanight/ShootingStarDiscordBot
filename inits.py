@@ -5,6 +5,7 @@ from os.path import isfile
 
 
 def initDB(name):
+    print(f"Creating database {DB_FOLDER}{name}...")
     with sqlite3.connect(f"{DB_FOLDER}{name}") as con:
         cur = con.cursor()
 

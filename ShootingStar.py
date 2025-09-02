@@ -13,6 +13,7 @@ import requests
 import pytz
 import tzlocal
 from discord.ext import tasks
+from discord.utils import get
 
 from botutils import *
 
@@ -27,7 +28,7 @@ class ShootingStar(Bot):
                        "__privilege get (all)__ allows you to get current (or all) privileged users.\n"
                        "__privilege add <USER> (minutes [int])__ allows you to give privileges to user for x minutes. Defaults to 5.")
         authorizationLevel = AuthorizationLevel.OWNER
-        syntax = [[Lexeme.TEXT, Lexeme.USER], [Lexeme.TEXT, Lexeme.USER, Lexeme.INT], [Lexeme.TEXT, Lexeme.TEXT], [Lexeme.TEXT]]
+        syntax = [[Lexeme.ACTION, Lexeme.USER], [Lexeme.ACTION, Lexeme.USER, Lexeme.INT], [Lexeme.ACTION, Lexeme.TEXT], [Lexeme.ACTION]]
 
         async def run(self, context, args):
             action = args[0]
@@ -41,7 +42,7 @@ class ShootingStar(Bot):
                 now = datetime.now()
                 until = now + timedelta(minutes=time)
 
-                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild}") as con:
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                     cur = con.cursor()
                     cur.execute("""
                     INSERT INTO privilege (user, endsAt)
@@ -51,11 +52,11 @@ class ShootingStar(Bot):
 
                 return True
 
-            def getPrivileged(getall):
+            def getPrivileges(getall):
                 privileged = getPrivileged(None, getall)
 
                 description = '\n'.join(
-                    f"- <@{p['userID']}>: - from <t:{p['doneAt']}:f> to <t:{p['activeUntil']}:f> (<t:{p['activeUntil']}:R>)".strip()
+                    f"- <@{p['user']}>: from <t:{p['startsAt']}:f> to <t:{p['endsAt']}:f> (<t:{p['endsAt']}:R>)".strip()
                     for p in privileged)
                 if not privileged: description = "__No match for the current search!__"
 
@@ -67,14 +68,14 @@ class ShootingStar(Bot):
                 time = 5
                 if len(args) == 3: time = args[2]
                 if addPrivileges(user, time):
-                    await context.channel.send(f"✅ I successfully privileged <@{user}> for {time} minutes!")
+                    await context.channel.send(f"✅ I successfully privileged <@{user.id}> for {time} minutes!")
                 else:
                     await context.channel.send(f"❌ I couldn't privilege <@{user}>, sorry... Was user the owner, or the bot itself?")
 
             # Gets privileged users:
             elif action in COMMAND_PREVIEW:
                 getall = len(args) == 2 and args[1] == "all"
-                desc = getPrivileged(getall)
+                desc = getPrivileges(getall)
 
                 title = "Privileged list"
                 if getall: title += " - All"
@@ -85,62 +86,6 @@ class ShootingStar(Bot):
 
             else:
                 await context.channel.send(f"❓ I did not understand what you meant by the action {action}, sorry!")
-
-
-    # TODO: Remove the two next ones if the command above works.
-    class GivePrivilege(Command):
-        description = "Gives (nearly) full privileges to a user for X minutes. Defaults to 5 if time isn't given."
-        authorizationLevel = AuthorizationLevel.OWNER
-        syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.INT]]
-
-        async def run(self, context, args):
-            user = args[0]
-            time = 5
-
-            if user == self.bot.user:
-                await context.channel.send("I can't privilege myself silly!")
-                return
-            if user.id == self.bot.settings['moderation']['owner']['value']:
-                await context.channel.send("I can't privilege the owner silly!")
-                return
-            # Command has user AND time specified.
-            if len(args) == 2: time = args[1]
-
-            now = datetime.now()
-            until = now + timedelta(minutes=time)
-            with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild}") as con:
-                cur = con.cursor()
-                cur.execute("""
-                INSERT INTO privilege (user, endsAt)
-                VALUES (?, ?)
-                """, (user.id, until))
-                con.commit()
-
-            await context.channel.send(
-                "User <@" + str(user.id) + "> got promoted to privileged for " + str(time) + " minutes.")
-
-    class GetPrivileged(Command):
-        description = "Prints all the currently privileged users. Add 'all' to the command to get a log of all privileging actions given."
-        authorizationLevel = AuthorizationLevel.OWNER
-        syntax = [[], [Lexeme.TEXT]]
-
-        async def run(self, context, args):
-            title = "Privileged list"
-            timeline = 0
-            if args:
-                title += f" - {args[0]}"
-                if args[0].lower() == "all": timeline = 1
-
-            privileged = getPrivileged(None, timeline)
-
-            description = '\n'.join(
-                f"- <@{p['userID']}>: - from <t:{p['doneAt']}:f> to <t:{p['activeUntil']}:f> (<t:{p['activeUntil']}:R>)".strip()
-                for p in privileged)
-
-            if not privileged: description = "__No match for the current search!__"
-
-            embed = self.bot.getDefaultEmbed(title, description, context.author)
-            await context.channel.send(embed=embed)
 
     class Purge(Command):
         description = "Clears last X messages in the corresponding channel. Defaults to setting value if no number is given."
@@ -155,8 +100,8 @@ class ShootingStar(Bot):
             await context.channel.purge(limit=number + 1)
 
     class Ping(Command):
-        description = "Tests to see how long the bot takes to answer!"
-        authorizationLevel = AuthorizationLevel.STAFF
+        description = "Allows you to test connection with me!"
+        authorizationLevel = AuthorizationLevel.NONE
         syntax = [[]]
 
         async def run(self, context, args):
@@ -185,8 +130,8 @@ class ShootingStar(Bot):
             elif args[0] == "refresh":
                 self.twitchStatus()
             else:
-                if not self.bot.settings['twitch']['automaticStatus']['value']:
-                    if self.bot.updateSetting(['twitch']['automaticStatus'], True):
+                if not self.bot.settings['twitch']['schedule']['automaticStatus']['value']:
+                    if self.bot.updateSetting(['twitch', 'schedule', 'automaticStatus'], True):
                         await context.channel.send(f"✅ Removed automatic status for the twitch channel to display new status!")
                     else:
                         await context.channel.send(f"❌ Couldn't remove automatic status for the twitch channel. Displayed status might get erased soon. Try setting it to False manually with settings command.")
@@ -194,14 +139,15 @@ class ShootingStar(Bot):
             await self.bot.change_presence(activity=discord.Game(name=message))
 
     class Help(Command):
-        description = "Shows help for commands. Shows every available command if written by itself, otherwise gives a quick description if a command name is specified."
-        authorizationLevel = AuthorizationLevel.MEMBER
+        description = ("Shows help for commands. Shows every available command if written by itself, otherwise gives a"
+                       "quick description if a command name is specified.")
+        authorizationLevel = AuthorizationLevel.NONE
         syntax = [[], [Lexeme.TEXT]]
 
         async def run(self, context, args):
             if not args:
                 args = ['General']
-                commandsByAuthorization = ["" for i in
+                commandsByAuthorization = ["" for _ in
                                            range(AuthorizationLevel.getMemberAuthorizationLevel(
                                                context.author).value + 1)]
                 for commands, classes in self.bot.commands.items():
@@ -226,7 +172,7 @@ class ShootingStar(Bot):
                     msg += f"\n**Syntaxes:**\n{syntaxes}"
                 else:
                     await context.channel.send(
-                        f"<@{context.author.id}>, I do not recognize `{args[0]}` as one of my commands!")
+                        f"❌ <@{context.author.id}>, I do not recognize `{args[0]}` as one of my commands!")
                     return
 
             embed = self.bot.getDefaultEmbed(f"Help - {args[0]}", msg, context.author)
@@ -291,11 +237,11 @@ class ShootingStar(Bot):
     class Settings(Command):
         description = f"Gives a quick recap of settings. Values can be modified with <help/add/rm/update> <path/to/setting> <value>."
         authorizationLevel = AuthorizationLevel.PRIVILEGED
-        syntax = [[], [Lexeme.TEXT, Lexeme.TEXT], [Lexeme.TEXT, Lexeme.TEXT, Lexeme.TEXT],
-                  [Lexeme.TEXT, Lexeme.TEXT, Lexeme.INT], [Lexeme.TEXT, Lexeme.TEXT, Lexeme.USER],
-                  [Lexeme.TEXT, Lexeme.TEXT, Lexeme.ROLE], [Lexeme.TEXT, Lexeme.TEXT, Lexeme.BOOL],
-                  [Lexeme.TEXT, Lexeme.TEXT, Lexeme.CHANNEL], [Lexeme.TEXT, Lexeme.TEXT, Lexeme.DATE],
-                  [Lexeme.TEXT, Lexeme.TEXT, Lexeme.BOOL]]
+        syntax = [[], [Lexeme.ACTION, Lexeme.TEXT], [Lexeme.ACTION, Lexeme.TEXT, Lexeme.TEXT],
+                  [Lexeme.ACTION, Lexeme.TEXT, Lexeme.INT], [Lexeme.ACTION, Lexeme.TEXT, Lexeme.USER],
+                  [Lexeme.ACTION, Lexeme.TEXT, Lexeme.ROLE], [Lexeme.ACTION, Lexeme.TEXT, Lexeme.BOOL],
+                  [Lexeme.ACTION, Lexeme.TEXT, Lexeme.CHANNEL], [Lexeme.ACTION, Lexeme.TEXT, Lexeme.DATE],
+                  [Lexeme.ACTION, Lexeme.TEXT, Lexeme.BOOL]]
 
         async def run(self, context, args):
             def formatValueToStr(value):
@@ -304,13 +250,40 @@ class ShootingStar(Bot):
                         return f"Unknown!"
                     if value["value"] == []:
                         return f"NULL"
+
+                    # TODO: fix adding new values to array of settings.
+
+                    print(f"Value: {value['value']} - type: {isinstance(value['value'], list)}")
+
                     match type:
                         case "USER":
+                            if isinstance(value['value'], list):
+                                res = ""
+                                for j in value['value']:
+                                    res += f"<@{j}>; "
+                                return res
                             return f"<@{value['value']}>"
                         case "ROLE":
+                            print(f"Value: {value} - Type: {type(value['value'])}")
+                            if isinstance(value['value'], list):
+                                res = ""
+                                for j in value['value']:
+                                    res += f"<@&{j}>; "
+                                return res
                             return f"<@&{value['value']}>"
                         case "CHANNEL":
+                            if isinstance(value['value'], list):
+                                res = ""
+                                for j in value['value']:
+                                    res += f"<#{j}>; "
+                                return res
                             return f"<#{value['value']}>"
+
+                    if isinstance(value['value'], list):
+                        res = ""
+                        for j in value['value']:
+                            res += f"{j}; "
+                        return res
                     return value['value']
 
                 if "value" not in value or "type" not in value:
@@ -324,7 +297,6 @@ class ShootingStar(Bot):
                     if type[0] == "[" and type[-1] == "]":
                         type = type[1:-1]
                         isArray = True
-
                     val = ""
                     if isArray and value['value'] != []:
                         for i in value:
@@ -382,14 +354,17 @@ class ShootingStar(Bot):
 
                 if self.bot.updateSetting(path, value):
                     await context.channel.send(
-                        f"<@{context.author.id}>, I successfully changed the setting {' - '.join(path)} to {value}!")
+                        f"✅ <@{context.author.id}>, I successfully changed the setting {' - '.join(path)} to {value}!")
                 else:
                     await context.channel.send(
-                        f"<@{context.author.id}>, I wasn't able to change the setting {' - '.join(path)} to {value}!")
+                        f"❌ <@{context.author.id}>, I wasn't able to change the setting {' - '.join(path)} to {value}!")
 
+    ###################
+    # TWITCH COMMANDS #
+    ###################
     class Twitch(Command):
         description = "Outputs the current Twitch channel checked by the bot"
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.MEMBER
         syntax = [[]]
 
         async def run(self, context, args):
@@ -397,7 +372,7 @@ class ShootingStar(Bot):
             id = self.bot.settings['twitch']['channel']['value']
             if id is None:
                 # If Twich channel not setup...
-                await context.channel.send(f"No twitch channel is being monitored right now!")
+                await context.channel.send(f"❗ No twitch channel is being monitored right now!")
                 return
             token = self.bot.getTwitchToken()
 
@@ -425,7 +400,9 @@ class ShootingStar(Bot):
             await context.channel.send(embed=embed)
 
     class Schedule(Command):
-        description = "Gives the next planned streams of da purple pegasi! You can override default values and specify amount of streams to display (1-25), or if you only want the streams of current week or not (false/true)"
+        description = ("Gives the next planned streams of da purple pegasi! You can override default values and specify"
+                       "amount of streams to display (1-25), or if you only want the streams of current week or not"
+                       "(false/true)")
         authorizationLevel = AuthorizationLevel.MEMBER
         syntax = [[], [Lexeme.INT], [Lexeme.BOOL]]
 
@@ -449,8 +426,10 @@ class ShootingStar(Bot):
 
 
             token = self.bot.getTwitchToken()
+            if token is None:
+                await context.channel.send(f"❌ No twitch OAuth token is being used. Please set them in settings.")
             if self.bot.settings['twitch']['channel']['value'] is None:
-                await context.channel.send(f"No twitch channel is being monitored right now!")
+                await context.channel.send(f"❌ No twitch channel is being monitored right now!")
                 return
             response = requests.get(
                 f"https://api.twitch.tv/helix/users?id={self.bot.settings['twitch']['channel']['value']}",
@@ -500,6 +479,75 @@ class ShootingStar(Bot):
     ###############
     # MOD ACTIONS #
     ###############
+    class Mute(Command):
+        description = ("Mutes a user for specified time and reason\n"
+                       "Quick reminder that a 'duration' should be used with this syntax: 1d2h3m to mute the user"
+                       "for one day, two hours and three minutes.")
+        authorizationLevel = AuthorizationLevel.STAFF
+        syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.DURATION], [Lexeme.USER, Lexeme.TEXT, Lexeme.DURATION], [Lexeme.USER, Lexeme.DURATION, Lexeme.TEXT]]
+
+        async def run(self, context, args):
+            user, time, reason = args[0], self.bot.settings['defaultValues']['muteTime']['value'], ""
+            if len(args) >= 2:
+                if type(args[1]) is dict: time = args[1]
+                else: reason = args[1]
+
+                if len(args) == 3:
+                    if type(args[2]) is dict: time = args[2]
+                    else: reason = args[2]
+
+            id = self.bot.addModAction(context.author, user, ModActions.MUTE.value, reason + f" | {time['days']}d{time['hours']}h{time['minutes']}m")
+            if id is not False:
+                modactions = self.bot.readJSONFrom('jsons/modactions.json')
+                pardon = datetime.now() + timedelta(days=time['days'], hours=time['hours'], minutes=time['minutes'])
+                if modactions == {}: modactions = []
+                modactions.append({"id": id, "user": user.id, "pardon": pardon.timestamp(), "action": ModActions.MUTE.value})
+                self.bot.writeJSONTo('jsons/modactions.json', modactions)
+
+                if len(modactions) == 1:
+                    print(f"Starting modActionsPardon!")
+                    self.bot.modActionPardon(modactions)
+
+                await user.add_roles(get(self.bot.guild.roles, id=self.bot.settings['moderation']['muted']['value']))
+                await context.channel.send(f"{user.display_name} has been muted for {time['days']}d{time['hours']}h{time['minutes']}m!")
+
+    class Unmute(Command):
+        description = ("Unmutes an user if that user was muted before. This will remove any pending duration."
+                       "You may specific a reason *after* specifying the user, if you wish.")
+        authorizationLevel = AuthorizationLevel.STAFF
+        syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.TEXT]]
+
+        async def run(self, context, args):
+            user, reason = (args + [None] * 2)[:2]
+            id = None
+
+            modactions = self.bot.readJSONFrom('jsons/modactions.json')
+            for i in modactions:
+                if i['user'] == user.id:
+                    id = i['id']
+                    modactions.remove(i)
+            if id is not None:
+                self.bot.writeJSONTo('jsons/modactions.json', modactions)
+            else:
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+                    cur = con.cursor()
+                    res = cur.execute("SELECT id FROM mod_log WHERE user = ? ORDER BY id DESC LIMIT 1")
+                    res = res.fetchone()
+                    id = res[0]
+
+            if id is not None:
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+                    cur = con.cursor()
+                    cur.execute("UPDATE mod_log SET pardon = ?, pardonTimestamp = ?, pardonReason = ? WHERE id = ?",
+                                (1, datetime.now(), reason, id))
+                msg = "✅ The user has been unmuted, and its action log has been pardon'd."
+            else:
+                msg = ("❌ No action notifying about a mute has been found. The muted role (if present) will be removed"
+                       "from the user. Please use the `justify rm` command to justify your unmute reason")
+
+            await user.remove_roles(get(self.bot.guild.roles), id=self.bot.settings['moderation']['muted']['value'])
+            await context.channel.send(msg)
+
     class Warn(Command):
         description = "Warns user for specified reason (if specified)"
         authorizationLevel = AuthorizationLevel.STAFF
@@ -541,21 +589,30 @@ class ShootingStar(Bot):
                 await context.channel.send(f'`Kick error: impossible to kick user {user.name}`')
 
     class Lockdown(Command):
-        description = ("If lockdown is used with no argument, the server enters lockdown mod: this means new members will need manual verification to access the server."
-                       "If lockdown is used with arguments, its purpose is to remove one user the ability to watch all the channels. They will see the not-members channel, which will give them a private chat between moderators and themselves."
-                       "Please note that the lockdown channel is the same for everyone!"
-                       "The syntax for this command is lockdown <add/remove> <user> <reason (if needed)>")
+        description = ("A lockdown denies a member access to all text and voice channel, except the one made"
+                       "specifically for it.\n"
+                       "If lockdown is used with no argument, the server enters lockdown mod: this means new members"
+                       "will need manual verification to access the server.\n"
+                       "If lockdown is used with arguments, its purpose is to remove one user the ability to watch all"
+                       "the channels. They will see the not-members channel, which will give them a private chat"
+                       "between moderators and themselves.\n"
+                       "⚠️ Please note that the lockdown channel is the same for everyone!\n"
+                       "The syntax for this command is lockdown <add/remove> <user> <reason (if needed)>\n"
+                       "Only ADMINS are allowed to put the server in general lockdown.")
         authorizationLevel = AuthorizationLevel.STAFF
-        syntax = [[], [Lexeme.TEXT, Lexeme.USER], [Lexeme.TEXT, Lexeme.USER, Lexeme.TEXT]]
+        syntax = [[], [Lexeme.ACTION, Lexeme.USER], [Lexeme.ACTION, Lexeme.USER, Lexeme.TEXT]]
 
         async def run(self, context, args):
             if len(args) == 0:
-                # General lockdown
-                if self.bot.settings['moderation']['lockdownMode']['value']:
-                    msg = "Lockdown mode has been **enabled**!"
+                if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.ADMIN.value:
+                    # General lockdown
+                    self.bot.updateSetting(['moderation', 'lockdownMode'], not self.bot.settings['moderation']['lockdownMode']['value'])
+                    if self.bot.settings['moderation']['lockdownMode']['value']:
+                        msg = "🔒 Lockdown mode has been **enabled**!"
+                    else:
+                        msg = "🔓 Lockdown mode has been **disabled**!"
                 else:
-                    msg = "Lockdown mode has been **disabled**!"
-                self.bot.updateSetting(['moderation', 'member'], not self.bot.settings['moderation']['lockdownMode']['value'])
+                    msg = "❌ You are not allowed to put the server in general lockdown!"
 
             else:
                 action, user = args[0], args[1]
@@ -564,68 +621,71 @@ class ShootingStar(Bot):
 
                 memberRoleID = self.bot.settings['moderation']['member']['value']
                 if memberRoleID is None:
-                    msg = "Member role has not been defined! Do it with the settings command!"
+                    msg = "❓ Member role has not been defined! Do it with the settings command first!"
                 else:
                     # If adding user to lockdown mode:
                     if reason in COMMAND_ADD:
                         if self.bot.addModAction(context.author, user, ModActions.LOCKDOWN.value, reason):
-                            await user.remove_roles(memberRoleID)
-                            msg = "User has successfuly being lockdown'd!"
+                            await user.remove_roles(get(self.bot.guild.roles, id=memberRoleID))
+                            msg = "🔒 User has successfuly being lockdown'd!"
                         else:
-                            msg = "You are not allowed to lockdown this user!"
+                            msg = "❗ You are not allowed to lockdown this user!"
 
                     # If removing user from lockdown mode:
                     elif reason in COMMAND_RM:
                         if AuthorizationLevel.getMemberAuthorizationLevel(context.author) > AuthorizationLevel.getMemberAuthorizationLevel(user):
-                            await user.add_roles(memberRoleID)
-                            msg = "User has been removed from lockdown!"
+                            await user.add_roles(get(self.bot.guild.roles, id=memberRoleID))
+                            msg = "🔓 User has been removed from lockdown!"
                         else:
-                            msg = "You can't remove this user from lockdown mode!"
+                            msg = "❗ You can't remove this user from lockdown mode!"
 
                     # If action not recognized:
                     else:
-                        msg = f"I didn't understand what you meant by {action}"
+                        msg = f"❓ I didn't understand what you meant by {action}"
             await context.channel.send(msg)
 
     class Ban(Command):
         description = ("Bans USER from server with given reason - if specified - and deletes the messages sent by them"
                        "in the last X (max. 7) days.\n"
-                       "__Both orders are valid__ (ban <user> <reason> <deleteTime> and ban <user> <deleteTime> <reason>.")
-        authorizationLevel = AuthorizationLevel.STAFF
-        syntax = [[Lexeme.USER, Lexeme.TEXT, Lexeme.INT], [Lexeme.USER, Lexeme.INT, Lexeme.TEXT], [Lexeme.USER], [Lexeme.USER, Lexeme.INT], [Lexeme.USER, Lexeme.TEXT]]
+                       "You may also temporarily ban a user by typing a duration."
+                       "(ie: 1d2h3m bans for 1 days, 2 hours and 3 minutes)\n"
+                       "__Except 'user', none of the arguments are required.__ Correct syntaxes are following:"
+                       "ban <user> <reason> <duration> <deleteTime>\n")
+        authorizationLevel = AuthorizationLevel.ADMIN
+        syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.TEXT], [Lexeme.USER, Lexeme.TEXT, Lexeme.DURATION], [Lexeme.USER, Lexeme.TEXT, Lexeme.DURATION, Lexeme.INT]]
 
         async def run(self, context, args):
-            user, delete, reason = None, 0, ""
-            for i in args:
-                if isinstance(i, discord.User):
-                    user = i
-                elif isinstance(i, int):
-                    delete = i
-                elif isinstance(i, str):
-                    reason = i
-                reason += f" - messages over the last {delete} days have been deleted"
+            user, reason, duration, deleteTime = (args + [None] * 4)[:4]
+
+            if deleteTime is not None: reason += f" - messages over the last {deleteTime} days have been deleted"
+            else: deleteTime = 0
             try:
-                if self.bot.addModAction(context.author, user, ModActions.BAN.value, reason):
-                    await user.ban(reason=reason, delete_message_days=delete)
+                id = self.bot.addModAction(context.author, user, ModActions.BAN.value, reason)
+                if id is not False:
+                    await user.ban(reason=reason, delete_message_days=deleteTime)
                     await context.channel.send(f"✅ {args[0].display_name} has been successfully banned!")
-                    logChannel = self.bot.settings['logs']['channel']['value']
-                    if logChannel is None: return
-                    embed = self.bot.getDefaultEmbed("User ban",
-                                                     f"{user.name} has been kicked by {context.author.name}, with reason {reason}",
-                                                     context.author, 0xff0000)
-                    await logChannel.send(embed=embed)
+                    if duration is not None:
+                        modactions = self.bot.readJSONFrom('jsons/modactions.json')
+                        pardon = datetime.now() + timedelta(days=duration['days'], hours=duration['hours'],
+                                                            minutes=duration['minutes'])
+                        if modactions == {}: modactions = []
+                        modactions.append(
+                            {"id": id, "user": user.id, "pardon": pardon.timestamp(), "action": ModActions.BAN.value})
+                        self.bot.writeJSONTo('jsons/modactions.json', modactions)
+                else:
+                    await context.channel.send(f"❌ The ban couldn't be done. Perhaps the user has higher authorization than you?")
             except discord.errors.Forbidden:
                 await context.channel.send(f'❌ `Ban error: impossible to ban user {user.name}`')
 
     class ModAction(Command):
-        description = ("Allows modification of a mod action. This command is used as following: __modaction <ACTION> <ID> <REASON>__."
+        description = ("Allows modification of a mod action. This command is used as following: __modaction <ACTION> <ID> (REASON)__."
                        "Actions can be view, rm (remove), up (update), or force-rm (force remove).\n"
                        "Remove acts as a 'pardon': action will be crossed when using Info command, but still appear just in case.\n"
                        "Force remove should be used when mistake was made (misclick, ...), as it completely removes the action from the DB. No reason is needed for that one.\n"
                        "Update is used to change the reason (or pardonReason) for an action. If an action has been pardon'd, only the pardon reason can be changed.\n"
-                       "View is used to get details about an action.")
+                       "View is used to get all details about an action.")
         authorizationLevel = AuthorizationLevel.STAFF
-        syntax = [[Lexeme.TEXT, Lexeme.INT], [Lexeme.TEXT, Lexeme.INT, Lexeme.TEXT]]
+        syntax = [[Lexeme.ACTION, Lexeme.INT], [Lexeme.ACTION, Lexeme.INT, Lexeme.TEXT]]
 
         async def run(self, context, args):
             # Function to remove a mod action. Set force to True to delete it, otherwise updates with pardon.
@@ -658,7 +718,6 @@ class ShootingStar(Bot):
                 return {"id": res[0], "mod": res[1], "user": res[2], "action": res[3], "reason": res[4], "timestamp": toDateTime(res[5], True), "pardon": res[6], "pardonTimestamp": toDateTime(res[7], True), "pardonReason": res[8]}
 
             act, actionID = args[0], args[1]
-            print(f"action ID: {actionID}")
             action = getAction(actionID)
             msg = "⚫ Oops, an unknown error happened!"
 
@@ -675,8 +734,11 @@ class ShootingStar(Bot):
 
             # If trying to force-remove the action
             if act in ["force-rm", "force", "F", "f", "frm", "force-remove"]:
-                removeAction(action) # Force remove the action (default)
-                msg = f"✅ <@{action['user']}>s {ModActions(action['action']).name} has been fully deleted!"
+                if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.PRIVILEGED:
+                    removeAction(action) # Force remove the action (default)
+                    msg = f"✅ <@{action['user']}>s {ModActions(action['action']).name} has been fully deleted!"
+                else:
+                    msg = f"❌ You are not allowed to force-remove an action!"
 
             # If trying to remove the action
             elif act in COMMAND_RM:
@@ -714,13 +776,12 @@ class ShootingStar(Bot):
 
             await context.channel.send(msg)
 
-
     class Uptime(Command):
         description = "Shows how long Shooting Star has been online for."
         authorizationLevel = AuthorizationLevel.STAFF
-        syntax = []
+        syntax = [[]]
 
-        async def run(self, context):
+        async def run(self, context, args):
             startTime = self.bot.startTime.strftime('%d/%m/%Y %H:%M')
             uptime = datetime.now() - self.bot.startTime
             await context.channel.send(f"I'm awake since {startTime}.\nMy current uptime is {uptime.days} day(s).")
@@ -730,7 +791,7 @@ class ShootingStar(Bot):
                        "If you want to show the next X birthdays, you just have to type __!birthday X__ (or without argument to show the next few ones)!\n"
                        "She can also forget your birthday with __!birthday remove__")
         authorizationLevel = AuthorizationLevel.MEMBER
-        syntax = [[], [Lexeme.INT], [Lexeme.TEXT, Lexeme.DATE], [Lexeme.TEXT]]
+        syntax = [[], [Lexeme.INT], [Lexeme.ACTION, Lexeme.DATE], [Lexeme.ACTION]]
 
         async def run(self, context, args):
             msg, embed = None, None
@@ -821,7 +882,7 @@ class ShootingStar(Bot):
                        '__planMessage list__ to list all the planned messages.\n'
                        '__planMessage <ID>__ to preview the message in the context channel.')
         authorizationLevel = AuthorizationLevel.STAFF
-        syntax = [[Lexeme.TEXT, Lexeme.CHANNEL, Lexeme.DATETIME, Lexeme.TEXT], [Lexeme.TEXT, Lexeme.INT], [Lexeme.TEXT], [Lexeme.INT]]
+        syntax = [[Lexeme.ACTION, Lexeme.CHANNEL, Lexeme.DATETIME, Lexeme.TEXT], [Lexeme.ACTION, Lexeme.INT], [Lexeme.ACTION], [Lexeme.INT]]
 
         async def run(self, context, args):
             action = args[0]
@@ -917,9 +978,35 @@ class ShootingStar(Bot):
                 newMsg.append(i)
         self.writeJSONTo('jsons/plannedMessages.json', newMsg)
 
+    @tasks.loop(minutes=1)
+    async def modActionPardon(self):
+        actions = self.readJSONFrom('jsons/modactions.json')
+        newActions = []
+        now = datetime.now().timestamp()
+        if not actions:
+            print(f"Stopping modActionPardon execution...")
+            self.modActionPardon.stop()
+        for i in actions:
+            if now > i['pardon']:
+                if i['action'] == ModActions.MUTE.value:
+                    user = self.guild.get_member(i['user'])
+                    await user.remove_roles(get(self.guild.roles, id=self.settings['moderation']['muted']['value']))
+
+                if i['action'] == ModActions.BAN.value:
+                    user = self.guild.get_member(i['user'])
+                    await user.unban()
+
+                with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
+                    cur = con.cursor()
+                    cur.execute("UPDATE mod_log SET pardon = ?, pardonTimestamp = ?, pardonReason = ? WHERE id = ?",
+                                (1, datetime.now(), "End of action timestamp", i['id']))
+            else:
+                newActions.append(i)
+
+        self.writeJSONTo('jsons/modactions.json', newActions)
+
+
     # TODO: https://discordpy.readthedocs.io/en/stable/api.html?highlight=reaction#discord.on_reaction_add
-    # TODO: Add a text to help mods in specific channel.
-    # TODO: vVv Check everything below this (especially logs) vVv
     # Checks twitch status.
     @tasks.loop(minutes=10)
     async def twitchStatus(self):
@@ -1017,6 +1104,11 @@ class ShootingStar(Bot):
         print("Checking settings...")
         initSettings()
         self.settings = self.readJSONFrom('jsons/settings.json')
+        print("Checking if owner is in settings...")
+        if self.settings['moderation']['owner']['value'] is None:
+            print("It is: replacing None to owner ID...")
+            self.settings['moderation']['owner']['value'] = self.guild.owner.id
+            self.writeJSONTo('jsons/settings.json', self.settings)
         print(f"Writing guild ID in utils.json...")
         utils = self.readJSONFrom('jsons/utils.json')
         utils['guildID'] = self.guild.id
@@ -1025,18 +1117,27 @@ class ShootingStar(Bot):
 
         print(f'Starting repeated tasks...')
         self.messagePlanner.start()
+        self.modActionPardon.start()
         print(f'Ready!')
 
         self.twitchStatus.start()
 
     async def on_member_join(self, member):
+        # Add the member role
+        print(self.settings['newcomers']['roles']['value'])
+        if self.settings['newcomers']['roles']['value'] is not []:
+            for role in self.settings['newcomers']['roles']['value']:
+                await member.add_roles(discord.utils.get(member.guild.roles, name=role))
+                print(role)
+
         embed = discord.Embed(title="User joined", color=discord.Colour.green(),
                               description=f"User **{member.name}** joined the server.\nAccount created the: {member.created_at.day}/{member.created_at.month}/{member.created_at.year}")
         # embed.set_thumbnail(url="attachment://icon_join.png")
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text=f"User ID: {member.id}")
         # await self.silent_logs.send(file=discord.File("images/icon_join.png"), embed=embed)
-        await self.silent_logs.send(embed=embed)
+
+        # await self.silent_logs.send(embed=embed)
 
     async def on_member_remove(self, member):
         embed = discord.Embed(title="User left", color=discord.Colour.red(),
@@ -1081,4 +1182,4 @@ class ShootingStar(Bot):
 if __name__ == "__main__":
     star = ShootingStar()
     star.run(SHOOTINGSTAR_TOKEN, log_handler=logging.FileHandler(filename='shootingstar.log', encoding='utf-8',
-                                                                 mode='w'))  # , log_level=logging.DEBUG)
+                                                                 mode='w'), log_level=logging.DEBUG)

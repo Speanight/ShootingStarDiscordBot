@@ -1,6 +1,3 @@
-# MIT Licence
-# authors: Luna and Yashn
-
 import discord
 import logging
 from datetime import datetime
@@ -13,8 +10,6 @@ import tzlocal
 import pytz
 import sqlite3
 
-BIRTHDAYS_FILE = "jsons/birthdays.json"
-
 
 class Starcron(Bot):
     # Gets users that celebrate their birthday today
@@ -23,17 +18,18 @@ class Starcron(Bot):
             return datetime.strptime(rawDate[0:10], '%Y-%m-%d')
 
         # checks for each person we know his/her birthday if it's today
-        with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+        with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
             cur = con.cursor()
             res = cur.execute(
-                f"SELECT * FROM birthday WHERE bday >= date('now', 'start of day')")
+                f"SELECT * FROM birthday WHERE strftime('%m-%d', day) = strftime('%m-%d', 'now')")
             res = res.fetchall()
 
-        msg = ""
+            print(res)
 
-        if res == []:
+        if not res:
             return None
 
+        msg = "🎂 "
         for i in res:
             date = convertSQLiteTimeToDatetime(i[1])
             entry = {"user": f"<@{i[0]}>", "age": date.year}
@@ -54,16 +50,20 @@ class Starcron(Bot):
 
         await self.runCronTasks()
 
-        print("Done!")
-        # await self.close()
+        print("Done! Closing...")
+        await self.close()
 
     async def runCronTasks(self):
         print("Running cron tasks...")
+
         # Task 1 - Check for potential birthdays
-        if self.settings['birthday']['enable'] and self.settings['birthday']['channel'] is not None:
+        print("Checking birthdays...")
+        if self.settings['birthday']['enable']['value'] and self.settings['birthday']['channel']['value'] is not None:
             msg = self.CheckBirthdays()
+            print(msg)
             if msg is not None:
-                await self.settings['birthday']['channel'].send(msg)
+                channel = self.guild.get_channel(self.settings['birthday']['channel']['value'])
+                await channel.send(msg)
 
 if __name__ == "__main__":
     sc = Starcron()

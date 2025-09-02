@@ -20,7 +20,7 @@ import discord.utils
 import inspect
 from enum import Enum
 from os.path import isfile
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from tokens import *
 import sqlite3
@@ -28,6 +28,7 @@ import requests
 import time
 import tzlocal
 import pytz
+import re
 
 
 class ModActions(Enum):
@@ -57,6 +58,8 @@ class AuthorizationLevel(Enum):
     def getMemberAuthorizationLevel(member):
         # Gets list of current privileged.
         privileged = getPrivileged(None, True)
+        privileges = []
+        for i in privileged: privileges.append(i['user'])
 
         # Getting IDs in settings:
         if not isfile('jsons/settings.json'):
@@ -71,7 +74,7 @@ class AuthorizationLevel(Enum):
 
         roles = [role.id for role in member.roles]
         if member.id == owner_id: return AuthorizationLevel.OWNER
-        if member.id in privileged:
+        if member.id in privileges:
             return AuthorizationLevel.PRIVILEGED
         elif admin_role_id in roles:
             return AuthorizationLevel.ADMIN
@@ -92,7 +95,9 @@ class Lexeme(Enum):
     COMMAND = 6
     DATE = 7
     DATETIME = 8
-    BOOL = 9
+    DURATION = 9
+    BOOL = 10
+    ACTION = 11
 
     def __repr__(self):
         return str(self.name)
@@ -184,6 +189,11 @@ class Command:
             elif word.startswith("<#") and word[2:-1].isnumeric() and word.endswith(">"):
                 parsedInput.append(int(word[2:-1]))
                 lexemes.append(Lexeme.CHANNEL)
+
+            # Action
+            elif word in COMMAND_ADD or word in COMMAND_RM or word in COMMAND_LIST or word in COMMAND_PREVIEW or word in COMMAND_UPDATE:
+                parsedInput.append(word)
+                lexemes.append(Lexeme.ACTION)
             # empty message
             elif word == "\"\"":
                 parsedInput.append("")
@@ -195,8 +205,21 @@ class Command:
                     parsedInput.append(word == "true")
                     lexemes.append(Lexeme.BOOL)
                 else:
-                    parsedInput.append(word)
-                    lexemes.append(Lexeme.TEXT)
+                    # We check to see if the word is actually a duration
+                    matches = re.findall(r'(\d+)([dhm])', word)
+                    result = {"days": 0, "hours": 0, "minutes": 0}
+                    for value, unit in matches:
+                        value = int(value)
+                        if unit == "d": result['days'] += value
+                        if unit == "h": result['hours'] += value
+                        if unit == "m": result['minutes'] += value
+                    if result["days"] != 0 or result["hours"] != 0 or result["minutes"] != 0:
+                        parsedInput.append(result)
+                        lexemes.append(Lexeme.DURATION)
+                    else:
+                        # Else, it's just a word.
+                        parsedInput.append(word)
+                        lexemes.append(Lexeme.TEXT)
 
         # if isInMessage is True, then a closing " is missing: parsing failed!
         if isInMessage: return None, None
@@ -209,7 +232,6 @@ class Command:
         parsedInput, lexemes = self.lexemize(message)
         # if parsing or syntax check fail: stop here and print correct command's syntax
         if parsedInput is None or lexemes[1:] not in self.syntax:
-            print(f"Got: {lexemes[1:]} instead of one of {self.syntax}")
             await message.channel.send(
                 f"`Syntaxes:`\n" +
                 "\n".join(
@@ -326,7 +348,7 @@ class Bot(discord.Client):
         s = self.settings
         for k in set:
             if k not in s:
-                return -1
+                return False
             s = s[k]
         # At end of loop, s is equal to setting to modify.
         if "type" not in s or "value" not in s: return False
@@ -352,20 +374,26 @@ class Bot(discord.Client):
 
         # If it does...
         if isArray:
+            print(value)
             # If value isn't an array, put it in an array with only itself as a value.
             if not isinstance(value, list):
                 value = [value]
-            else:
-                # Check that type of value corresponds for every item in array.
-                for i in value:
-                    if not checkTypeCompatibility(type, i):
-                        print(f"Value {i} in array {value} isn't of type {type}!")
-                        return False  # Return if one of the value doesn't correspond to expected type
+
+            rawValue = value
+            value = []
+            # Check that type of value corresponds for every item in array.
+            for i in rawValue:
+                if not checkTypeCompatibility(type, i):
+                    print(f"Value {i} in array {value} isn't of type {type}!")
+                    return False  # Return if one of the value doesn't correspond to expected type
+                value.append(checkTypeCompatibility(type, i))
+
         # Otherwise, check compatibility of the value.
-        value = checkTypeCompatibility(type, value)
-        if value == None:
-            print(f"Value {value} isn't of type {type}!")
-            return False  # Return if type doesn't correpsond.
+        else:
+            value = checkTypeCompatibility(type, value)
+            if value is None:
+                print(f"Value {value} isn't of type {type}!")
+                return False  # Return if type doesn't correpsond.
 
         s["value"] = value  # Finally, change value if everything corresponds.
 
@@ -398,11 +426,13 @@ class Bot(discord.Client):
         if token:
             if token["expires_at"] > time.time():
                 return token["access_token"]
+        if self.settings['twitch']['OAuth']['id']['value'] is None or self.settings['twitch']['OAuth']['secret']['value'] is None:
+            return None
         response = requests.post(
             "https://id.twitch.tv/oauth2/token",
             params={
-                "client_id": self.settings['twitch']['OAuth']['id'],
-                "client_secret": self.settings['twitch']['OAuth']['secret'],
+                "client_id": self.settings['twitch']['OAuth']['id']['value'],
+                "client_secret": self.settings['twitch']['OAuth']['secret']['value'],
                 "grant_type": "client_credentials"
             }
         )
@@ -427,7 +457,9 @@ class Bot(discord.Client):
             cur = con.cursor()
             cur.execute("INSERT INTO mod_log (mod, user, action, reason) VALUES (?, ?, ?, ?)",
                         (mod.id, user.id, action, reason))
-        return True
+        return cur.lastrowid
+
+
 
 
 #####################
@@ -442,6 +474,8 @@ def getPrivileged(userID=None, presentOnly=False):
 
     with sqlite3.connect(f"{DB_FOLDER}{guildId}") as con:
         cur = con.cursor()
+        res = cur.execute("SELECT CURRENT_TIMESTAMP")
+        res = res.fetchall()
         res = cur.execute(query)
         res = res.fetchall()  # id, user, startsAt, endsAt
     if not res:
@@ -450,10 +484,8 @@ def getPrivileged(userID=None, presentOnly=False):
         privileged = []
     for i in res:
         line = {"id": i[0], "user": i[1],
-                "startsAt": int(datetime.strptime(i[2], "%Y-%m-%d %H:%M:%S").timestamp()),
-                "endsAt": int(datetime.strptime(i[3], "%Y-%m-%d %H:%M:%S").timestamp())}
+                "startsAt": toDateTime(i[2], True), "endsAt": toDateTime(i[3], True)}
         privileged.append(line)
-
     return privileged
 
 
@@ -461,14 +493,14 @@ def toDateTime(field, timestamp=False):
     if field is None: return None
 
     # Everything is stored UTC time, need to get local timezone for correct time on Discord.
-    timezone = tzlocal.get_localzone()
+    localTimezone = tzlocal.get_localzone()
     formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"]
     for i in formats:
         try:
-            time = datetime.strptime(field, i)
+            time = datetime.strptime(field, i).replace(tzinfo=timezone.utc)
             if timestamp:
-                return int(time.astimezone(timezone).timestamp())
-            return time.astimezone(timezone)
+                return int(time.astimezone(localTimezone).timestamp())
+            return time.astimezone(localTimezone)
         except ValueError:
             continue
     return None
