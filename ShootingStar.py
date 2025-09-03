@@ -244,66 +244,67 @@ class ShootingStar(Bot):
                   [Lexeme.ACTION, Lexeme.TEXT, Lexeme.BOOL]]
 
         async def run(self, context, args):
-            def formatValueToStr(value):
-                def printType(value):
-                    if "value" not in value or "type" not in value:
+            def formatValueToStr(v):
+                print(v)
+                def printType(v):
+                    if "value" not in v or "type" not in v:
                         return f"Unknown!"
-                    if value["value"] == []:
+                    if v["value"] == []:
                         return f"NULL"
 
                     # TODO: fix adding new values to array of settings.
 
-                    print(f"Value: {value['value']} - type: {isinstance(value['value'], list)}")
+                    print(f"Value: {v['value']} - type: {isinstance(v['value'], list)}")
 
                     match type:
                         case "USER":
-                            if isinstance(value['value'], list):
+                            if isinstance(v['value'], list):
                                 res = ""
-                                for j in value['value']:
+                                for j in v['value']:
                                     res += f"<@{j}>; "
                                 return res
-                            return f"<@{value['value']}>"
+                            return f"<@{v['value']}>"
                         case "ROLE":
-                            print(f"Value: {value} - Type: {type(value['value'])}")
-                            if isinstance(value['value'], list):
+                            if isinstance(v['value'], list):
                                 res = ""
-                                for j in value['value']:
+                                for j in v['value']:
                                     res += f"<@&{j}>; "
                                 return res
-                            return f"<@&{value['value']}>"
+                            return f"<@&{v['value']}>"
                         case "CHANNEL":
-                            if isinstance(value['value'], list):
+                            if isinstance(v['value'], list):
                                 res = ""
-                                for j in value['value']:
+                                for j in v['value']:
                                     res += f"<#{j}>; "
                                 return res
-                            return f"<#{value['value']}>"
+                            return f"<#{v['value']}>"
 
-                    if isinstance(value['value'], list):
+                    if isinstance(v['value'], list):
                         res = ""
-                        for j in value['value']:
+                        for j in v['value']:
                             res += f"{j}; "
                         return res
-                    return value['value']
+                    return v['value']
 
-                if "value" not in value or "type" not in value:
-                    return f"Unknown!"
-                if value["value"] is None:
+                if "value" not in v or "type" not in v:
+                    val = "Unknown!"
+                elif v["value"] is None:
                     val = f"NULL"
                 else:
-                    type = value["type"]
+                    type = v["type"]
                     isArray = False
                     if type[0] == "!": type = type[1:]
                     if type[0] == "[" and type[-1] == "]":
                         type = type[1:-1]
                         isArray = True
                     val = ""
-                    if isArray and value['value'] != []:
-                        for i in value:
-                            val += printType(i)
-                    else:
-                        val = printType(value)
+                    # if isArray and v['value'] != []:
+                    #     for i in v['value']:
+                    #         val += printType(i)
+                    # else:
+                    val = printType(v)
 
+                print(val)
                 return val
 
             msg = ""
