@@ -488,7 +488,11 @@ class ShootingStar(Bot):
         syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.DURATION], [Lexeme.USER, Lexeme.TEXT, Lexeme.DURATION], [Lexeme.USER, Lexeme.DURATION, Lexeme.TEXT]]
 
         async def run(self, context, args):
-            user, time, reason = args[0], self.bot.settings['defaultValues']['muteTime']['value'], ""
+            if self.bot.settings['moderation']['muted']['value'] is None:
+                await context.channel.send("❗ No muted role has been attributed. Therefor, mutes are unavailable. Please ask owner or privileged to set it with settings command.")
+                return
+            user, reason = args[0], ""
+            time = {"days": 0, "hours": 0, "minutes": self.bot.settings['defaultValues']['muteTime']['value']}
             if len(args) >= 2:
                 if type(args[1]) is dict: time = args[1]
                 else: reason = args[1]
@@ -507,20 +511,22 @@ class ShootingStar(Bot):
 
                 if len(modactions) == 1:
                     print(f"Starting modActionsPardon!")
-                    self.bot.modActionPardon(modactions)
+                    await self.bot.modActionPardon()
 
                 await user.add_roles(get(self.bot.guild.roles, id=self.bot.settings['moderation']['muted']['value']))
                 await context.channel.send(f"{user.display_name} has been muted for {time['days']}d{time['hours']}h{time['minutes']}m!")
 
     class Unmute(Command):
-        description = ("Unmutes an user if that user was muted before. This will remove any pending duration."
-                       "You may specific a reason *after* specifying the user, if you wish.")
+        description = "Unmutes an user if that user was muted before. This will remove any pending duration."
         authorizationLevel = AuthorizationLevel.STAFF
-        syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.TEXT]]
+        syntax = [[Lexeme.USER]]
 
         async def run(self, context, args):
-            user, reason = (args + [None] * 2)[:2]
-            id = None
+            if self.bot.settings['moderation']['muted']['value'] is None:
+                await context.channel.send("❗ No muted role has been attributed. Therefor, mutes are unavailable. Please ask owner or privileged to set it with settings command.")
+                return
+
+            user, id = args[0], None
 
             modactions = self.bot.readJSONFrom('jsons/modactions.json')
             for i in modactions:
@@ -529,24 +535,13 @@ class ShootingStar(Bot):
                     modactions.remove(i)
             if id is not None:
                 self.bot.writeJSONTo('jsons/modactions.json', modactions)
-            else:
-                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                    cur = con.cursor()
-                    res = cur.execute("SELECT id FROM mod_log WHERE user = ? ORDER BY id DESC LIMIT 1")
-                    res = res.fetchone()
-                    id = res[0]
 
-            if id is not None:
-                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                    cur = con.cursor()
-                    cur.execute("UPDATE mod_log SET pardon = ?, pardonTimestamp = ?, pardonReason = ? WHERE id = ?",
-                                (1, datetime.now(), reason, id))
-                msg = "✅ The user has been unmuted, and its action log has been pardon'd."
+            if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value > AuthorizationLevel.getMemberAuthorizationLevel(user).value:
+                msg = "✅ The user has been unmuted."
+                await user.remove_roles(get(self.bot.guild.roles, id=self.bot.settings['moderation']['muted']['value']))
             else:
-                msg = ("❌ No action notifying about a mute has been found. The muted role (if present) will be removed"
-                       "from the user. Please use the `justify rm` command to justify your unmute reason")
+                msg = "❌ You are not allowed to unmute this user."
 
-            await user.remove_roles(get(self.bot.guild.roles), id=self.bot.settings['moderation']['muted']['value'])
             await context.channel.send(msg)
 
     class Warn(Command):
@@ -809,9 +804,10 @@ class ShootingStar(Bot):
 
                 if limit > 20: limit = 20
                 # Display the next X birthday
+                print(f"Opening: {DB_FOLDER}{self.bot.guild.id}")
                 with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                     cur = con.cursor()
-                    res = cur.execute(f"select user, day, julianday(strftime('%Y', 'now')||strftime('-%m-%d', day))-julianday('now') as birthday from birthday where birthday between -1 and 30 LIMIT {limit}")
+                    res = cur.execute(f"select user, day, julianday(strftime('%Y', 'now')||strftime('-%m-%d', day))-julianday('now') as birthday from birthday LIMIT {limit}")
                     res = res.fetchall()
 
                     if not res:
@@ -837,8 +833,7 @@ class ShootingStar(Bot):
                     res = res.fetchall()  # id, day
 
                     if res:
-                        print(f"Res: {res}")
-                        return f"⚠️ I already knew your birthday, silly! You're born the {res[0][0]}"
+                        return f"⚠️ I already knew your birthday, silly!"
                     if date:
                         cur.execute("""
                         INSERT INTO birthday (user, day)
