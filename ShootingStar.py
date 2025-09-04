@@ -14,6 +14,7 @@ import pytz
 import tzlocal
 from discord.ext import tasks
 from discord.utils import get
+import os
 
 from botutils import *
 
@@ -660,6 +661,8 @@ class ShootingStar(Bot):
                         modactions.append(
                             {"id": id, "user": user.id, "pardon": pardon.timestamp(), "action": ModActions.BAN.value})
                         self.bot.writeJSONTo('jsons/modactions.json', modactions)
+                        if len(modactions) == 1:
+                            self.bot.modActionPardon.start()
                 else:
                     await context.channel.send(f"❌ The ban couldn't be done. Perhaps the user has higher authorization than you?")
             except discord.errors.Forbidden:
@@ -963,6 +966,7 @@ class ShootingStar(Bot):
                     if len(i['embed']) > 0:
                         file = discord.File(f"files/{i['embed'][0]}")
                         await channel.send(i['msg'], file=file)
+                        os.remove(f"files/{i['embed'][0]}")
                     else:
                         await channel.send(i['msg'])
                 except Exception as e:
@@ -991,13 +995,9 @@ class ShootingStar(Bot):
                     await user.remove_roles(get(self.guild.roles, id=self.settings['moderation']['muted']['value']))
 
                 if i['action'] == ModActions.BAN.value:
-                    user = self.guild.get_member(i['user'])
-                    await user.unban()
+                    user = await self.fetch_user(i['user'])
+                    await self.guild.unban(user)
 
-                with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
-                    cur = con.cursor()
-                    cur.execute("UPDATE mod_log SET pardon = ?, pardonTimestamp = ?, pardonReason = ? WHERE id = ?",
-                                (1, datetime.now(), "End of action timestamp", i['id']))
             else:
                 newActions.append(i)
 
@@ -1129,6 +1129,12 @@ class ShootingStar(Bot):
                 except discord.Forbidden:
                     pass
 
+        if self.settings['moderation']['member']['value'] is not None and self.settings['moderation']['lockdownMode']['value'] is False:
+            try:
+                await member.add_roles(discord.utils.get(member.guild.roles, id=self.settings['moderation']['member']['value']))
+            except discord.Forbidden:
+                pass
+
         embed = discord.Embed(title="User joined", color=discord.Colour.green(),
                               description=f"User **{member.name}** joined the server.\nAccount created the: {member.created_at.day}/{member.created_at.month}/{member.created_at.year}")
         # embed.set_thumbnail(url="attachment://icon_join.png")
@@ -1143,7 +1149,6 @@ class ShootingStar(Bot):
                               description=f"User **{member.name}** left the server")
         # embed.set_thumbnail(url="attachment://icon_join.png")
         embed.set_footer(text=f"User ID: {member.id}")
-        await self.silent_logs.send(file=discord.File("images/icon_join.png"), embed=embed)
 
     async def on_member_update(self, member_old, member_new):
         if member_old.display_name != member_new.display_name:
@@ -1151,7 +1156,6 @@ class ShootingStar(Bot):
                                   description=f"User **{member_new.name}** changed their username.\nChange: {member_old.display_name} -> {member_new.display_name}")
             embed.set_thumbnail(url="attachment://icon_update.png")
             embed.set_footer(text=f"User ID: {member_new.id}")
-            await self.silent_logs.send(file=discord.File("images/icon_update.png"), embed=embed)
 
     ####################
     # USEFUL FUNCTIONS #
