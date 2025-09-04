@@ -374,7 +374,6 @@ class Bot(discord.Client):
 
         # If it does...
         if isArray:
-            print(value)
             # If value isn't an array, put it in an array with only itself as a value.
             if not isinstance(value, list):
                 value = [value]
@@ -384,7 +383,6 @@ class Bot(discord.Client):
             # Check that type of value corresponds for every item in array.
             for i in rawValue:
                 if not checkTypeCompatibility(type, i):
-                    print(f"Value {i} in array {value} isn't of type {type}!")
                     return False  # Return if one of the value doesn't correspond to expected type
                 value.append(checkTypeCompatibility(type, i))
 
@@ -392,7 +390,6 @@ class Bot(discord.Client):
         else:
             value = checkTypeCompatibility(type, value)
             if value is None:
-                print(f"Value {value} isn't of type {type}!")
                 return False  # Return if type doesn't correpsond.
 
         s["value"] = value  # Finally, change value if everything corresponds.
@@ -474,8 +471,6 @@ def getPrivileged(userID=None, presentOnly=False):
 
     with sqlite3.connect(f"{DB_FOLDER}{guildId}") as con:
         cur = con.cursor()
-        res = cur.execute("SELECT CURRENT_TIMESTAMP")
-        res = res.fetchall()
         res = cur.execute(query)
         res = res.fetchall()  # id, user, startsAt, endsAt
     if not res:
@@ -494,7 +489,7 @@ def toDateTime(field, timestamp=False):
 
     # Everything is stored UTC time, need to get local timezone for correct time on Discord.
     localTimezone = tzlocal.get_localzone()
-    formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"]
+    formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S.%f+00:00"]
     for i in formats:
         try:
             time = datetime.strptime(field, i).replace(tzinfo=timezone.utc)

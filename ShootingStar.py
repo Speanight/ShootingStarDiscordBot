@@ -39,7 +39,7 @@ class ShootingStar(Bot):
                 if user.id == self.bot.settings['moderation']['owner']['value']:
                     return False
 
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 until = now + timedelta(minutes=time)
 
                 with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
@@ -245,16 +245,11 @@ class ShootingStar(Bot):
 
         async def run(self, context, args):
             def formatValueToStr(v):
-                print(v)
                 def printType(v):
                     if "value" not in v or "type" not in v:
                         return f"Unknown!"
                     if v["value"] == []:
                         return f"NULL"
-
-                    # TODO: fix adding new values to array of settings.
-
-                    print(f"Value: {v['value']} - type: {isinstance(v['value'], list)}")
 
                     match type:
                         case "USER":
@@ -304,7 +299,6 @@ class ShootingStar(Bot):
                     # else:
                     val = printType(v)
 
-                print(val)
                 return val
 
             msg = ""
@@ -611,16 +605,14 @@ class ShootingStar(Bot):
                     msg = "❌ You are not allowed to put the server in general lockdown!"
 
             else:
-                action, user = args[0], args[1]
-                if len(args) == 2: reason = args[2]
-                else: reason = ""
+                action, user, reason = (args + [None] * 3)[:3]
 
                 memberRoleID = self.bot.settings['moderation']['member']['value']
                 if memberRoleID is None:
                     msg = "❓ Member role has not been defined! Do it with the settings command first!"
                 else:
                     # If adding user to lockdown mode:
-                    if reason in COMMAND_ADD:
+                    if action in COMMAND_ADD:
                         if self.bot.addModAction(context.author, user, ModActions.LOCKDOWN.value, reason):
                             await user.remove_roles(get(self.bot.guild.roles, id=memberRoleID))
                             msg = "🔒 User has successfuly being lockdown'd!"
@@ -628,8 +620,8 @@ class ShootingStar(Bot):
                             msg = "❗ You are not allowed to lockdown this user!"
 
                     # If removing user from lockdown mode:
-                    elif reason in COMMAND_RM:
-                        if AuthorizationLevel.getMemberAuthorizationLevel(context.author) > AuthorizationLevel.getMemberAuthorizationLevel(user):
+                    elif action in COMMAND_RM:
+                        if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value > AuthorizationLevel.getMemberAuthorizationLevel(user).value:
                             await user.add_roles(get(self.bot.guild.roles, id=memberRoleID))
                             msg = "🔓 User has been removed from lockdown!"
                         else:
@@ -710,7 +702,6 @@ class ShootingStar(Bot):
                     res = res.fetchone()
 
                 if not res: return None
-                print(res)
                 return {"id": res[0], "mod": res[1], "user": res[2], "action": res[3], "reason": res[4], "timestamp": toDateTime(res[5], True), "pardon": res[6], "pardonTimestamp": toDateTime(res[7], True), "pardonReason": res[8]}
 
             act, actionID = args[0], args[1]
@@ -804,7 +795,6 @@ class ShootingStar(Bot):
 
                 if limit > 20: limit = 20
                 # Display the next X birthday
-                print(f"Opening: {DB_FOLDER}{self.bot.guild.id}")
                 with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                     cur = con.cursor()
                     res = cur.execute(f"select user, day, julianday(strftime('%Y', 'now')||strftime('-%m-%d', day))-julianday('now') as birthday from birthday LIMIT {limit}")
@@ -826,7 +816,6 @@ class ShootingStar(Bot):
 
             def addBirthday(date, user=context.author.id):
                 # Adds new birthday
-                print(f"Date: {date} - user: {user}")
                 with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                     cur = con.cursor()
                     res = cur.execute(f"SELECT * FROM birthday WHERE user = {user}")
@@ -882,16 +871,24 @@ class ShootingStar(Bot):
 
         async def run(self, context, args):
             action = args[0]
-            def addMessage(channel, day, content):
+            async def addMessage(channel, day, content):
                 plannedMsg = self.bot.readJSONFrom('jsons/plannedMessages.json')
                 if plannedMsg == {}: plannedMsg = []
-                msg = {'id': len(plannedMsg)+1, 'channel': channel.id, 'time': int(day.timestamp()), 'msg': content}
+
+                # Checks if message has an embed...
+                attach = []
+                for i in context.message.attachments:
+                    attach.append(i.filename)
+                    await i.save(f'files/{i.filename}')
+
+
+                msg = {'id': len(plannedMsg)+1, 'channel': channel.id, 'time': int(day.timestamp()), 'msg': content, 'embed': attach}
                 plannedMsg.append(msg)
                 self.bot.writeJSONTo('jsons/plannedMessages.json', plannedMsg)
                 if len(plannedMsg) == 1:
                     print(f"Starting message planner!")
                     self.bot.messagePlanner.start()
-                return msg['id']
+                return len(plannedMsg)
 
             def removeMessage(id):
                 plannedMsg = self.bot.readJSONFrom('jsons/plannedMessages.json')
@@ -923,13 +920,13 @@ class ShootingStar(Bot):
             emb = False
             # If trying to add a new message:
             if action in COMMAND_ADD:
-                id = addMessage(args[1], args[2], args[3])
-                msg = f"Your message *(ID: {id})* has successfully been added to the list!"
+                idPlanned = await addMessage(args[1], args[2], args[3])
+                msg = f"✅ Your message *(ID: {idPlanned})* has successfully been added to the list!"
             elif action in ["remove", "rm", "-"]:
                 if removeMessage(args[1]):
-                    msg = "Your message has successfully been removed!"
+                    msg = "🗑️ Your message has successfully been removed!"
                 else:
-                    msg = "Your message couldn't be found!"
+                    msg = "❗ Your message couldn't be found!"
             # If trying to list all planned messages:
             elif action in COMMAND_LIST:
                 msg = listMessages()
@@ -940,9 +937,9 @@ class ShootingStar(Bot):
                 if pmsg is not None:
                     msg = f"{pmsg['msg']}"
                 else:
-                    msg = "Sorry, your message could not be found!"
+                    msg = "❗ Sorry, your message could not be found!"
             else:
-                msg = "I did not understand the action you wanted. Please use one of those: `add`, `remove`, `list`, `preview`"
+                msg = "❓ I did not understand the action you wanted. Please use one of those: `add`, `remove`, `list`, `preview`"
 
             if emb:
                 embed = self.bot.getDefaultEmbed("Message", msg, context.author)
@@ -959,19 +956,24 @@ class ShootingStar(Bot):
         msg = self.readJSONFrom('jsons/plannedMessages.json')
         newMsg = []
         now = datetime.now().timestamp()
-        if not msg:
-            print(f"Stopping messagePlanner execution...")
-            self.messagePlanner.stop()
         for i in msg:
             if now > i['time']:
                 try:
                     channel = self.get_channel(i['channel'])
-                    await channel.send(i['msg'])
+                    if len(i['embed']) > 0:
+                        file = discord.File(f"files/{i['embed'][0]}")
+                        await channel.send(i['msg'], file=file)
+                    else:
+                        await channel.send(i['msg'])
                 except Exception as e:
                     print(f"Failed to send message {i['id']}! Error: {e}")
                     newMsg.append(i)
             else:
                 newMsg.append(i)
+
+        if not newMsg:
+            print(f"Stopping messagePlanner execution...")
+            self.messagePlanner.stop()
         self.writeJSONTo('jsons/plannedMessages.json', newMsg)
 
     @tasks.loop(minutes=1)
@@ -1120,11 +1122,12 @@ class ShootingStar(Bot):
 
     async def on_member_join(self, member):
         # Add the member role
-        print(self.settings['newcomers']['roles']['value'])
         if self.settings['newcomers']['roles']['value'] is not []:
             for role in self.settings['newcomers']['roles']['value']:
-                await member.add_roles(discord.utils.get(member.guild.roles, name=role))
-                print(role)
+                try:
+                    await member.add_roles(discord.utils.get(member.guild.roles, id=role))
+                except discord.Forbidden:
+                    pass
 
         embed = discord.Embed(title="User joined", color=discord.Colour.green(),
                               description=f"User **{member.name}** joined the server.\nAccount created the: {member.created_at.day}/{member.created_at.month}/{member.created_at.year}")
