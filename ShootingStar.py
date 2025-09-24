@@ -110,7 +110,7 @@ class ShootingStar(Bot):
 
     class Say(Command):
         description = "Makes me say TEXT in CHANNEL (if specified, otherwise I'll talk in the same one as the one this command has been sent in!)"
-        authorizationLevel = AuthorizationLevel.ADMIN
+        authorizationLevel = AuthorizationLevel.STAFF
         syntax = [[Lexeme.TEXT], [Lexeme.CHANNEL, Lexeme.TEXT]]
 
         async def run(self, context, args):

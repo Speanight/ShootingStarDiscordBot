@@ -146,6 +146,7 @@ class Command:
         return None
 
     def lexemize(self, message):
+        QUOTES = ("\"", "„", "”", "“", "”", "'")
         parsedInput, lexemes = [], []
 
         splitedMessage = message.content.split(" ")
@@ -161,7 +162,7 @@ class Command:
             elif isInMessage:
                 parsedInput[-1].append(word)
             # starts of a message with "
-            elif not isInMessage and word.startswith("\"") and (not word.endswith("\"") or word.endswith("\\\"")):
+            elif not isInMessage and word.startswith(QUOTES) and (not word.endswith(QUOTES) or word.endswith("\\\"")):
                 isInMessage = True
                 parsedInput.append([word[1:]])
                 lexemes.append(Lexeme.TEXT)
