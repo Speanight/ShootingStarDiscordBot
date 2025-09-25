@@ -154,7 +154,7 @@ class Command:
 
         for eword, word in enumerate(splitedMessage):
             # end of message with " at the end (not \"): add message to parsed data and removes the " at the end
-            if isInMessage and not word.endswith("\\\"") and word.endswith("\""):
+            if isInMessage and not word.endswith("\\\"") and word.endswith(QUOTES):
                 isInMessage = False
                 parsedInput[-1].append(word[:-1])
                 parsedInput[-1] = " ".join(parsedInput[-1])
@@ -219,6 +219,8 @@ class Command:
                         lexemes.append(Lexeme.DURATION)
                     else:
                         # Else, it's just a word.
+                        if word.startswith(QUOTES) and word.endswith(QUOTES):
+                            word = word[1:-1]
                         parsedInput.append(word)
                         lexemes.append(Lexeme.TEXT)
 
