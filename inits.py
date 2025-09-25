@@ -42,6 +42,21 @@ def initDB(name):
                         user INTEGER PRIMARY KEY,
                         bday DATE NOT NULL)""")
 
+        # cur.execute("""CREATE TABLE IF NOT EXISTS QTCounter (
+        #                 cuteCaller INTEGER NOT NULL,
+        #                 cuteCallee INTEGER NOT NULL
+        #
+        #                 """)
+
+        cur.execute("""CREATE TABLE IF NOT EXISTS quote (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user INTEGER NOT NULL,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        author INTEGER NOT NULL,
+                        quote TEXT NOT NULL)""")
+
+        # TODO: Continue DB
+
         actions = [i for i in ModActions]
 
         for i, action in enumerate(actions, start=1):

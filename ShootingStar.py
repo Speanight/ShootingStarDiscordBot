@@ -14,6 +14,7 @@ import pytz
 import tzlocal
 from discord.ext import tasks
 from discord.utils import get
+import os
 
 from botutils import *
 
@@ -109,7 +110,7 @@ class ShootingStar(Bot):
 
     class Say(Command):
         description = "Makes me say TEXT in CHANNEL (if specified, otherwise I'll talk in the same one as the one this command has been sent in!)"
-        authorizationLevel = AuthorizationLevel.ADMIN
+        authorizationLevel = AuthorizationLevel.STAFF
         syntax = [[Lexeme.TEXT], [Lexeme.CHANNEL, Lexeme.TEXT]]
 
         async def run(self, context, args):
@@ -660,6 +661,8 @@ class ShootingStar(Bot):
                         modactions.append(
                             {"id": id, "user": user.id, "pardon": pardon.timestamp(), "action": ModActions.BAN.value})
                         self.bot.writeJSONTo('jsons/modactions.json', modactions)
+                        if len(modactions) == 1:
+                            self.bot.modActionPardon.start()
                 else:
                     await context.channel.send(f"❌ The ban couldn't be done. Perhaps the user has higher authorization than you?")
             except discord.errors.Forbidden:
@@ -773,93 +776,6 @@ class ShootingStar(Bot):
             uptime = datetime.now() - self.bot.startTime
             await context.channel.send(f"I'm awake since {startTime}.\nMy current uptime is {uptime.days} day(s).")
 
-    class Birthday(Command):
-        description = ("Shooting Star can wish you happy birthday! Add your birthday with __!birthday add DD/MM__ (or DD/MM/YYYY if you want her to know your age too!)\n"
-                       "If you want to show the next X birthdays, you just have to type __!birthday X__ (or without argument to show the next few ones)!\n"
-                       "She can also forget your birthday with __!birthday remove__")
-        authorizationLevel = AuthorizationLevel.MEMBER
-        syntax = [[], [Lexeme.INT], [Lexeme.ACTION, Lexeme.DATE], [Lexeme.ACTION]]
-
-        async def run(self, context, args):
-            msg, embed = None, None
-
-            def getNextBirthdays(limit):
-                def getNextOccurence(rawDate):
-                    bdayDay = datetime.strptime(rawDate[0:10], '%Y-%m-%d')
-                    now = datetime.now()
-
-                    if now < bdayDay: bdayDay = bdayDay.replace(year=now.year)
-                    else: bdayDay = bdayDay.replace(year=now.year+1)
-
-                    return bdayDay + timedelta(hours=14)
-
-                if limit > 20: limit = 20
-                # Display the next X birthday
-                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                    cur = con.cursor()
-                    res = cur.execute(f"select user, day, julianday(strftime('%Y', 'now')||strftime('-%m-%d', day))-julianday('now') as birthday from birthday LIMIT {limit}")
-                    res = res.fetchall()
-
-                    if not res:
-                        return self.bot.getDefaultEmbed("Incoming birthdays", f"❓ I don't know the birthday of anyone here! You can add yours by typing birthday add DD/MM!", context.author)
-
-                    msg = ""
-                    for i in res:
-                        date = getNextOccurence(i[1])
-
-                        entry = {"user": f"<@{i[0]}>", "bday": date}
-                        if entry['bday'].month == datetime.now().month and entry['bday'].day == datetime.now().day:
-                            msg += f"> {entry['user']} | 🎂 TODAY! WISH THEM HAPPY BDAY!\n"
-                        else:
-                            msg += f"> {entry['user']} | <t:{int(entry['bday'].timestamp())}:d> (<t:{int(entry['bday'].timestamp())}:R>)\n"
-                    return self.bot.getDefaultEmbed("Incoming birthdays", msg, context.author)
-
-            def addBirthday(date, user=context.author.id):
-                # Adds new birthday
-                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                    cur = con.cursor()
-                    res = cur.execute(f"SELECT * FROM birthday WHERE user = {user}")
-                    res = res.fetchall()  # id, day
-
-                    if res:
-                        return f"⚠️ I already knew your birthday, silly!"
-                    if date:
-                        cur.execute("""
-                        INSERT INTO birthday (user, day)
-                        VALUES (?, ?)
-                        """, (user, date))
-                        con.commit()
-                        return "✅ I successfully saved your birthday in my database!"
-                    else:
-                        return "❓ I didn't understand the date you gave me, sorry... Make sure it's in format DD/MM or DD/MM/YYYY"
-
-            def removeBirthday(user=context.author.id):
-                # Deletes the birthday
-                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                    cur = con.cursor()
-                    cur.execute(f"DELETE FROM birthday WHERE user = {user}")
-                    con.commit()
-                    return f"✅ I deleted your birthday from my memory!"
-
-            if len(args) == 0 or isinstance(args[0], int):
-                if len(args) == 0: limit = 10
-                else: limit = args[0]
-                embed = getNextBirthdays(limit)
-                await context.channel.send(embed=embed)
-                return
-
-            elif args[0] in COMMAND_ADD:
-                msg = addBirthday(args[1], context.author.id)
-            elif args[0] in COMMAND_RM:
-                msg = removeBirthday()
-            else:
-                # None of that: unknown request
-                await context.channel.send(f"❌ I didn't understand what you meant by '{args[0]}', sorry!")
-            if msg is not None:
-                await context.channel.send(msg)
-            elif embed is not None:
-                await context.channel.send(embed=embed)
-
     class PlanMessage(Command):
         description = ('Allows the bot to plan sending a message at a specific time. Here are the expected syntaxes:\n'
                        '__planMessage add <CHANNEL> <DATETIME> "<TEXT>"__ to add a new planned text.\n'
@@ -947,6 +863,139 @@ class ShootingStar(Bot):
             else:
                 await context.channel.send(msg)
 
+
+    ##################
+    # "FUN" COMMANDS #
+    ##################
+    class Birthday(Command):
+        description = ("Shooting Star can wish you happy birthday! Add your birthday with __!birthday add DD/MM__ (or DD/MM/YYYY if you want her to know your age too!)\n"
+                       "If you want to show the next X birthdays, you just have to type __!birthday X__ (or without argument to show the next few ones)!\n"
+                       "She can also forget your birthday with __!birthday remove__")
+        authorizationLevel = AuthorizationLevel.MEMBER
+        syntax = [[], [Lexeme.INT], [Lexeme.ACTION, Lexeme.DATE], [Lexeme.ACTION]]
+
+        async def run(self, context, args):
+            msg, embed = None, None
+
+            def getNextBirthdays(limit):
+                def getNextOccurence(rawDate):
+                    bdayDay = datetime.strptime(rawDate[0:10], '%Y-%m-%d')
+                    now = datetime.now()
+
+                    if now < bdayDay: bdayDay = bdayDay.replace(year=now.year)
+                    else: bdayDay = bdayDay.replace(year=now.year+1)
+
+                    return bdayDay + timedelta(hours=14)
+
+                if limit > 20: limit = 20
+                # Display the next X birthday
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+                    cur = con.cursor()
+                    res = cur.execute(f"select user, day, julianday(strftime('%Y', 'now')||strftime('-%m-%d', day))-julianday('now') as birthday from birthday LIMIT {limit}")
+                    res = res.fetchall()
+
+                    if not res:
+                        return self.bot.getDefaultEmbed("Incoming birthdays", f"❓ I don't know the birthday of anyone here! You can add yours by typing birthday add DD/MM!", context.author)
+
+                    msg = ""
+                    for i in res:
+                        date = getNextOccurence(i[1])
+
+                        entry = {"user": f"<@{i[0]}>", "bday": date}
+                        if entry['bday'].month == datetime.now().month and entry['bday'].day == datetime.now().day:
+                            msg += f"> {entry['user']} | 🎂 TODAY! WISH THEM HAPPY BDAY!\n"
+                        else:
+                            msg += f"> {entry['user']} | <t:{int(entry['bday'].timestamp())}:d> (<t:{int(entry['bday'].timestamp())}:R>)\n"
+                    return self.bot.getDefaultEmbed("Incoming birthdays", msg, context.author)
+
+            def addBirthday(date, user=context.author.id):
+                # Adds new birthday
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+                    cur = con.cursor()
+                    res = cur.execute(f"SELECT * FROM birthday WHERE user = {user}")
+                    res = res.fetchall()  # id, day
+
+                    if res:
+                        return f"⚠️ I already knew your birthday, silly!"
+                    if date:
+                        cur.execute("""
+                        INSERT INTO birthday (user, day)
+                        VALUES (?, ?)
+                        """, (user, date))
+                        con.commit()
+                        return "✅ I successfully saved your birthday in my database!"
+                    else:
+                        return "❓ I didn't understand the date you gave me, sorry... Make sure it's in format DD/MM or DD/MM/YYYY"
+
+            def removeBirthday(user=context.author.id):
+                # Deletes the birthday
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+                    cur = con.cursor()
+                    cur.execute(f"DELETE FROM birthday WHERE user = {user}")
+                    con.commit()
+                    return f"✅ I deleted your birthday from my memory!"
+
+            if len(args) == 0 or isinstance(args[0], int):
+                if len(args) == 0: limit = 10
+                else: limit = args[0]
+                embed = getNextBirthdays(limit)
+                await context.channel.send(embed=embed)
+                return
+
+            elif args[0] in COMMAND_ADD:
+                msg = addBirthday(args[1], context.author.id)
+            elif args[0] in COMMAND_RM:
+                msg = removeBirthday()
+            else:
+                # None of that: unknown request
+                await context.channel.send(f"❌ I didn't understand what you meant by '{args[0]}', sorry!")
+            if msg is not None:
+                await context.channel.send(msg)
+            elif embed is not None:
+                await context.channel.send(embed=embed)
+
+    class Eightball(Command):
+        description = "8ball command: asks it anything, and it shall give you THE answer (definitely not something random trust)"
+        authorizationLevel = AuthorizationLevel.MEMBER
+        syntax = [[Lexeme.TEXT]]
+
+        async def run(self, context, args):
+            answers = ["Definitely!", "Yes!", "Most likely.", "As I see it, yes", "Signs point to yes.", "Yes.",
+                       "Ask again later", "Better keep that secret...", "I'm not sure",
+                       "Nuh-uh!", "No", "Nope!", "Very doubtful", "No way!", "Impossible."]
+            random.seed(datetime.now().timestamp())
+            await context.channel.send(random.choice(answers))
+
+    class Cute(Command):
+        description = "Gives your daily cute % if used without argument."
+        authorizationLevel = AuthorizationLevel.MEMBER
+        syntax = [[]]
+
+        async def run(self, context, args):
+            def getCutePercentage(seed):
+                random.seed(seed)
+                return random.random() * 100
+
+            # Using cute %age command
+            if not args:
+                today = datetime.now()
+                today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+                percent = round(getCutePercentage(context.author.id + today.timestamp()), 2)
+
+                await context.channel.send(f"<@{context.author.id}>, you are **{percent}%** cute today!")
+
+    # class Quote(Command):
+    #     description = ('Allows you to add, list or get details of a quote.\n'
+    #                    'To add a quote, use !quote add <@user> "quote".\n'
+    #                    'To list quotes, just use !quote\n'
+    #                    'To get details of a quote, use !quote get <QuoteID>.')
+    #     authorizationLevel = AuthorizationLevel.MEMBER
+    #     syntax = [[], [Lexeme.ACTION, Lexeme.USER, Lexeme.TEXT], [Lexeme.ACTION, Lexeme.INT]]
+    #
+    #     async def run(self, context, args):
+    #         pass
+
+
     ################
     # LOOPED TASKS #
     ################
@@ -963,6 +1012,7 @@ class ShootingStar(Bot):
                     if len(i['embed']) > 0:
                         file = discord.File(f"files/{i['embed'][0]}")
                         await channel.send(i['msg'], file=file)
+                        os.remove(f"files/{i['embed'][0]}")
                     else:
                         await channel.send(i['msg'])
                 except Exception as e:
@@ -991,13 +1041,9 @@ class ShootingStar(Bot):
                     await user.remove_roles(get(self.guild.roles, id=self.settings['moderation']['muted']['value']))
 
                 if i['action'] == ModActions.BAN.value:
-                    user = self.guild.get_member(i['user'])
-                    await user.unban()
+                    user = await self.fetch_user(i['user'])
+                    await self.guild.unban(user)
 
-                with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
-                    cur = con.cursor()
-                    cur.execute("UPDATE mod_log SET pardon = ?, pardonTimestamp = ?, pardonReason = ? WHERE id = ?",
-                                (1, datetime.now(), "End of action timestamp", i['id']))
             else:
                 newActions.append(i)
 
@@ -1129,6 +1175,12 @@ class ShootingStar(Bot):
                 except discord.Forbidden:
                     pass
 
+        if self.settings['moderation']['member']['value'] is not None and self.settings['moderation']['lockdownMode']['value'] is False:
+            try:
+                await member.add_roles(discord.utils.get(member.guild.roles, id=self.settings['moderation']['member']['value']))
+            except discord.Forbidden:
+                pass
+
         embed = discord.Embed(title="User joined", color=discord.Colour.green(),
                               description=f"User **{member.name}** joined the server.\nAccount created the: {member.created_at.day}/{member.created_at.month}/{member.created_at.year}")
         # embed.set_thumbnail(url="attachment://icon_join.png")
@@ -1143,7 +1195,6 @@ class ShootingStar(Bot):
                               description=f"User **{member.name}** left the server")
         # embed.set_thumbnail(url="attachment://icon_join.png")
         embed.set_footer(text=f"User ID: {member.id}")
-        await self.silent_logs.send(file=discord.File("images/icon_join.png"), embed=embed)
 
     async def on_member_update(self, member_old, member_new):
         if member_old.display_name != member_new.display_name:
@@ -1151,7 +1202,6 @@ class ShootingStar(Bot):
                                   description=f"User **{member_new.name}** changed their username.\nChange: {member_old.display_name} -> {member_new.display_name}")
             embed.set_thumbnail(url="attachment://icon_update.png")
             embed.set_footer(text=f"User ID: {member_new.id}")
-            await self.silent_logs.send(file=discord.File("images/icon_update.png"), embed=embed)
 
     ####################
     # USEFUL FUNCTIONS #
@@ -1181,4 +1231,4 @@ class ShootingStar(Bot):
 if __name__ == "__main__":
     star = ShootingStar()
     star.run(SHOOTINGSTAR_TOKEN, log_handler=logging.FileHandler(filename='shootingstar.log', encoding='utf-8',
-                                                                 mode='w'), log_level=logging.DEBUG)
+                                                                 mode='w')) #, log_level=logging.DEBUG)
