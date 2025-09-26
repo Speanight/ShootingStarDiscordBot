@@ -459,7 +459,13 @@ class Bot(discord.Client):
                         (mod.id, user.id, action, reason))
         return cur.lastrowid
 
-
+    async def sendMessage(self, channel, message, author):
+        msg = await channel.send(message)
+        with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
+            cur = con.cursor()
+            cur.execute("INSERT INTO message (user, channel, message) VALUES (?, ?, ?)",
+                        (author.id, channel.id, msg.id))
+        return True
 
 
 #####################
