@@ -146,7 +146,7 @@ class Command:
         return None
 
     def lexemize(self, message):
-        QUOTES = ("\"", "„", "”", "“", "”", "'")
+        QUOTES = ("\"", "„", "”", "“", "”", "'", "```")
         parsedInput, lexemes = [], []
 
         splitedMessage = message.content.split(" ")
@@ -389,6 +389,8 @@ class Bot(discord.Client):
                     return False  # Return if one of the value doesn't correspond to expected type
                 value.append(checkTypeCompatibility(type, i))
 
+                # TODO: Fix settings qui ne peuvent pas être append si array!
+
         # Otherwise, check compatibility of the value.
         else:
             value = checkTypeCompatibility(type, value)
@@ -448,7 +450,7 @@ class Bot(discord.Client):
         if not utc: return day.astimezone(timezone)
         return day
 
-    def addModAction(self, mod, user, action, reason):
+    async def addModAction(self, mod, user, action, reason):
         if AuthorizationLevel.getMemberAuthorizationLevel(
                 mod) != AuthorizationLevel.OWNER and AuthorizationLevel.getMemberAuthorizationLevel(
                 mod).value <= AuthorizationLevel.getMemberAuthorizationLevel(user).value:
@@ -457,6 +459,15 @@ class Bot(discord.Client):
             cur = con.cursor()
             cur.execute("INSERT INTO mod_log (mod, user, action, reason) VALUES (?, ?, ?, ?)",
                         (mod.id, user.id, action, reason))
+
+        # Adds the log if settings says to:
+        if self.settings['logs']['channel']['value'] is not None and self.settings['logs']['modActions']['value'] is True:
+            embed = self.bot.getDefaultEmbed(f"ModAction: {repr(action)}",
+                                             f"**[ID: {cur.lastrowid}]** Action taken by {mod.display_name} with following reason: {reason}",
+                                             mod, discord.Colour.orange())
+            embed.set_thumbnail(user.avatar)
+            await self.settings['logs']['channel']['value'].send(embed=embed)
+
         return cur.lastrowid
 
     async def sendMessage(self, channel, message, author):
