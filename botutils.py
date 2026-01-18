@@ -1,5 +1,6 @@
 # MIT Licence
 # authors: Luna and Yashn
+import asyncio
 
 WARNS_FILE = "jsons/warns.json"
 BIRTHDAYS_FILE = "jsons/birthdays.json"
@@ -13,6 +14,9 @@ COMMAND_RM = ["remove", "rm", "rem", "delete", "del", "-"]
 COMMAND_LIST = ["list", "ls", "="]
 COMMAND_PREVIEW = ["preview", "view", "watch", "see", "pv", "pw", "info", "?"]
 COMMAND_UPDATE = ["update", "up", "#"]
+COMMAND_HELP = ["help", "?"]
+
+ACTIONS = [COMMAND_ADD, COMMAND_RM, COMMAND_LIST, COMMAND_PREVIEW, COMMAND_UPDATE, COMMAND_HELP]
 
 # import logging
 import discord
@@ -22,13 +26,14 @@ from enum import Enum
 from os.path import isfile
 from datetime import datetime, timezone
 import json
-from tokens import *
+from dotenv import load_dotenv
 import sqlite3
 import requests
 import time
 import tzlocal
 import pytz
 import re
+import os
 
 
 class ModActions(Enum):
@@ -192,7 +197,7 @@ class Command:
                 lexemes.append(Lexeme.CHANNEL)
 
             # Action
-            elif word in COMMAND_ADD or word in COMMAND_RM or word in COMMAND_LIST or word in COMMAND_PREVIEW or word in COMMAND_UPDATE:
+            elif any(word in sublist for sublist in ACTIONS):
                 parsedInput.append(word)
                 lexemes.append(Lexeme.ACTION)
             # empty message
@@ -405,6 +410,7 @@ class Bot(discord.Client):
         return True  # And return true
 
     def manualUpdateSetting(self, setting, value):
+        TWITCH_ID = getEnv('TWITCH_ID')
         # Used to update Twitch channels.
         if setting["manualUpdate"] == "TwitchChannel":
             token = self.getTwitchToken()
@@ -412,7 +418,7 @@ class Bot(discord.Client):
                 f"https://api.twitch.tv/helix/users?login={value.lower()}",
                 headers={
                     "Authorization": f"Bearer {token}",
-                    "client-id": f"{self.settings['twitch']['OAuth']['id']['value']}"
+                    "client-id": f"{TWITCH_ID}"
                 }
             )
             res = response.json()
@@ -425,20 +431,26 @@ class Bot(discord.Client):
 
     def getTwitchToken(self):
         token = self.readJSONFrom('jsons/twitchToken.json')
+        TWITCH_ID = getEnv('TWITCH_ID')
+        TWITCH_SECRET = getEnv('TWITCH_SECRET')
         if token:
             if token["expires_at"] > time.time():
                 return token["access_token"]
-        if self.settings['twitch']['OAuth']['id']['value'] is None or self.settings['twitch']['OAuth']['secret']['value'] is None:
+        if TWITCH_ID is None or TWITCH_SECRET is None:
             return None
         response = requests.post(
             "https://id.twitch.tv/oauth2/token",
             params={
-                "client_id": self.settings['twitch']['OAuth']['id']['value'],
-                "client_secret": self.settings['twitch']['OAuth']['secret']['value'],
+                "client_id": TWITCH_ID,
+                "client_secret": TWITCH_SECRET,
                 "grant_type": "client_credentials"
             }
         )
         token = response.json()
+        print(f"Got token: {token}")
+        if "status" in token and token['status'] == 403:
+            self.sendErrorMessage(f"Twitch error: got status {token['status']}: {token['message']}")
+            return None
         token['expires_at'] = token['expires_in'] + time.time()
         self.writeJSONTo('jsons/twitchToken.json', token)
         return response.json()["access_token"]
@@ -449,6 +461,12 @@ class Bot(discord.Client):
         day = datetime.strptime(hour, format).replace(tzinfo=pytz.utc)
         if not utc: return day.astimezone(timezone)
         return day
+
+    async def sendErrorMessage(self, message):
+        if self.settings['logs']['errors']['value'] is not None:
+            logs = self.get_channel(self.settings['logs']['errors']['value'])
+            await logs.send(f"❌ ERROR: {message}")
+        await asyncio.sleep(0)
 
     async def addModAction(self, mod, user, action, reason):
         if AuthorizationLevel.getMemberAuthorizationLevel(
@@ -482,6 +500,10 @@ class Bot(discord.Client):
 #####################
 # DATABASE COMMANDS #
 #####################
+def getEnv(value):
+    load_dotenv()
+    return os.getenv(value)
+
 def getPrivileged(userID=None, presentOnly=False):
     guildId = json.loads(open('jsons/utils.json', 'r').read())['guildID']
     query = "SELECT * FROM privilege"

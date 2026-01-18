@@ -2,8 +2,7 @@ import discord
 import logging
 from datetime import datetime
 
-from tokens import SHOOTINGSTAR_TOKEN
-from botutils import Bot, Command, DB_FOLDER
+from botutils import *
 import requests
 from datetime import datetime, timedelta, date
 import tzlocal
@@ -67,4 +66,4 @@ class Starcron(Bot):
 
 if __name__ == "__main__":
     sc = Starcron()
-    sc.run(SHOOTINGSTAR_TOKEN, log_handler=logging.FileHandler(filename='starcron.log', encoding='utf-8', mode='w'), log_level=logging.DEBUG)
+    sc.run(getEnv('SHOOTINGSTAR_TOKEN'), log_handler=logging.FileHandler(filename='starcron.log', encoding='utf-8', mode='w'), log_level=logging.DEBUG)

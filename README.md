@@ -23,10 +23,13 @@ If you're looking for one bot that would do all of this (and more to come!) inst
    2. pytz
    3. tzlocal
    4. datetime
+   5. python-dotenv
 5. You need to create a file in images/ called BotPFP.png. This will be used in embed.
-6. You also need to create a tokens.py file with the following content:
+6. You also need to create a `.env` file with the following content:
 ```
-SHOOTINGSTAR_TOKEN = "Insert here your Discord Bot Token"
+SHOOTINGSTAR_TOKEN=Insert here your Discord Bot Token
+TWITCH_ID=Insert here your twitch id
+TWITCH_TOKEN=Insert here your twitch token
 ```
 > [!NOTE]
 > [Here](https://discordpy.readthedocs.io/en/stable/discord.html) you can find the steps to create your discord bot and get the token (that you should put in "SHOOTINGSTAR_TOKEN").

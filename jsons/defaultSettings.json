@@ -72,6 +72,11 @@
       "value": false,
       "type": "BOOL",
       "description": "Set to true if logs should output mod actions (warns, mutes, kicks, bans), otherwise set to false."
+    },
+    "errors": {
+      "value": null,
+      "type": "!CHANNEL",
+      "description": "If things don't work out, this will be the channel where errors will be printed!"
     }
   },
   "moderation": {
@@ -118,18 +123,6 @@
       "description": "Channel ID of the streamer used for twitch-related commands.",
       "outputHandle": "showTwitchChannel",
       "manualUpdate": "TwitchChannel"
-    },
-    "OAuth": {
-      "id": {
-        "value": null,
-        "type": "!TEXT",
-        "description": "ID of the OAuth used for the Twitch application."
-      },
-      "secret": {
-        "value": null,
-        "type": "!TEXT",
-        "description": "Secret of the OAuth used for the Twitch application."
-      }
     },
     "schedule": {
       "maxLimit": {

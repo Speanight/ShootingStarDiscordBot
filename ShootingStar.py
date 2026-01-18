@@ -1,17 +1,10 @@
 # MIT Licence
 # authors: Luna
 
-import discord
 import logging
 import random
-import requests
-from datetime import datetime, timedelta, date
-from tokens import SHOOTINGSTAR_TOKEN
+from datetime import timedelta
 from inits import *
-from os.path import isfile
-import requests
-import pytz
-import tzlocal
 from discord.ext import tasks
 from discord.utils import get
 import os
@@ -359,12 +352,12 @@ class ShootingStar(Bot):
             else:
                 action = args[0].lower()
                 path = args[1].split("/")
-                if action != "help" and len(args) < 3:
+                if action not in COMMAND_HELP and len(args) < 3:
                     value = None
-                elif action != "help":
+                elif action not in COMMAND_HELP:
                     value = args[2]
 
-                if action == "help":
+                if action in COMMAND_HELP:
                     s = self.bot.settings
                     for k in path:
                         if k not in s:
@@ -918,8 +911,6 @@ class ShootingStar(Bot):
                     now = datetime.now()
                     bdayDay = datetime.strptime(rawDate[0:10], '%Y-%m-%d').replace(year=now.year)
 
-                    print(f"Comparing BDays: {now} < {bdayDay}?")
-
                     if now > bdayDay: bdayDay = bdayDay.replace(year=now.year+1)
 
                     return bdayDay + timedelta(hours=14)
@@ -1096,12 +1087,13 @@ class ShootingStar(Bot):
 
         if updateStatus and id is not None:
             print("Updating status...")
+            TWITCH_ID = getEnv('TWITCH_ID')
             # Recovering data with Twitch API
             token = self.getTwitchToken()
             response = requests.get(
                 f"https://api.twitch.tv/helix/schedule?broadcaster_id={self.settings['twitch']['channel']['value']}&first=1",
                 headers={
-                    "Client-ID": self.settings['twitch']['OAuth']['id']['value'],
+                    "Client-ID": TWITCH_ID,
                     "Authorization": f"Bearer {token}"
                 }
             )
@@ -1110,7 +1102,7 @@ class ShootingStar(Bot):
             response = requests.get(
                 f"https://api.twitch.tv/helix/streams?user_id={self.settings['twitch']['channel']['value']}",
                 headers={
-                    "Client-ID": self.settings['twitch']['OAuth']['id']['value'],
+                    "Client-ID": TWITCH_ID,
                     "Authorization": f"Bearer {token}"
                 }
             )
@@ -1272,5 +1264,6 @@ class ShootingStar(Bot):
 
 if __name__ == "__main__":
     star = ShootingStar()
-    star.run(SHOOTINGSTAR_TOKEN, log_handler=logging.FileHandler(filename='shootingstar.log', encoding='utf-8',
+
+    star.run(getEnv('SHOOTINGSTAR_TOKEN'), log_handler=logging.FileHandler(filename='shootingstar.log', encoding='utf-8',
                                                                  mode='w')) #, log_level=logging.DEBUG)
