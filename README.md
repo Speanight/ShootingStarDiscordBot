@@ -41,6 +41,24 @@ SHOOTINGSTAR_TOKEN = "Insert here your Discord Bot Token"
 > Even if the twitch OAuth ID is considered as an info that can be considered public, your secret should always be kept private. You can edit manually the `jsons/settings.json` file, or you can go through discord commands, but it is recommended to share the twitch secret only in a private channel.
 > Keep in mind that a OAuth token is similar to a password: anyone that has it can act as your app and run whatever code they want. Same goes with your Discord token.
 
+You can also create a service for the bot itself, by adding a new file inside `/etc/systemd/system/file.service`:
+```ini
+[Unit]
+Description=Discord Bot (Shooting Star) service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=ShootingStar
+WorkingDirectory=/var/discordBot
+ExecStart=/srv/python/venv/bin/python3 /var/discordBot/ShootingStar.py
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ## Updates
 **Version 1.0.0:** First release of the bot. So far, the bot is able to do basic moderation actions, as well as twitch actions and plan messages.
 

@@ -24,7 +24,7 @@
     },
     "channel": {
       "value": null,
-      "type": "!TEXT",
+      "type": "!CHANNEL",
       "description": "Defines the channel in which Shooting Star should wish happy BDay. Setting this to null disables all bday wishes and make ponies sad :c"
     }
   },
