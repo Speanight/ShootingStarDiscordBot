@@ -48,6 +48,12 @@ def initDB(name):
         #
         #                 """)
 
+        cur.execute("""CREATE TABLE IF NOT EXISTS message (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user INTEGER NOT NULL,
+                        channel INTEGER NOT NULL,
+                        message INTEGER NOT NULL)""")
+
         cur.execute("""CREATE TABLE IF NOT EXISTS quote (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user INTEGER NOT NULL,

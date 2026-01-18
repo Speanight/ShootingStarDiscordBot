@@ -109,15 +109,47 @@ class ShootingStar(Bot):
             await context.channel.send("pong")
 
     class Say(Command):
-        description = "Makes me say TEXT in CHANNEL (if specified, otherwise I'll talk in the same one as the one this command has been sent in!)"
+        description = ("Makes me say TEXT in CHANNEL (if specified, otherwise I'll talk in the same one as the one this command has been sent in!)\n"
+                       "It is also possible to check messages that has been sent with the LIST action. A message ID can also be given as an argument.")
         authorizationLevel = AuthorizationLevel.STAFF
-        syntax = [[Lexeme.TEXT], [Lexeme.CHANNEL, Lexeme.TEXT]]
+        syntax = [[Lexeme.TEXT], [Lexeme.CHANNEL, Lexeme.TEXT], [Lexeme.ACTION], [Lexeme.ACTION, Lexeme.INT]]
 
         async def run(self, context, args):
-            channel = context.channel
-            if len(args) == 2: channel = args[0]
-            message = args[-1]
-            await channel.send(message)
+            # TODO: check that say command is working.
+            if args[0] == COMMAND_LIST:
+                msgId = None
+                query = "SELECT * FROM message"
+                if len(args) == 2:
+                    msgId = args[1]
+                    query += f" WHERE message = {msgId}"
+
+                with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+                    cur = con.cursor()
+                    res = cur.execute(query)
+                    res = res.fetchall()
+
+                if not res:
+                    if msgId is not None:
+                        msg = f"❌ No message found!"
+                    else:
+                        msg = f"📃 No message has been sent with the bot yet! Try it out with `!say TEXT`!"
+                else:
+                    if msgId is not None:
+                        msg = f"The message https://discord.com/channels/{self.bot.guild.id}/{res[0]['channel']}/{res[0]['message']} has been sent by <@{res[0]['user']}"
+                    else:
+                        msg = ""
+                        for i in res:
+                            msg += f"- https://discord.com/channels/{self.bot.guild.id}/{res[0]['channel']}/{res[0]['message']} has been sent by <@{res[0]['user']} | sent by <@{i['user']}>"
+
+                await self.bot.getDefaultEmbed("Say checkout", msg, context.author)
+
+
+            else:
+                channel = context.channel
+                if len(args) == 2: channel = args[0]
+                message = args[-1]
+                self.bot.sendMessage(channel, message, context.author)
+
 
     class Status(Command):
         description = ("Modifies my custom status! No argument (or empty string) to delete it. Gets overwritten by twitch status setting!\n"
@@ -649,9 +681,13 @@ class ShootingStar(Bot):
             if deleteTime is not None: reason += f" - messages over the last {deleteTime} days have been deleted"
             else: deleteTime = 0
             try:
-                id = self.bot.addModAction(context.author, user, ModActions.BAN.value, reason)
+                r = reason
+                if duration is not None:
+                    r += " - " + duration
+                id = self.bot.addModAction(context.author, user, ModActions.BAN.value, r)
                 if id is not False:
-                    await user.ban(reason=reason, delete_message_days=deleteTime)
+                    await self.bot.guild.ban(user=user, reason=reason, delete_message_days=deleteTime)
+                    # await user.ban(reason=reason, delete_message_days=deleteTime)
                     await context.channel.send(f"✅ {args[0].display_name} has been successfully banned!")
                     if duration is not None:
                         modactions = self.bot.readJSONFrom('jsons/modactions.json')
@@ -798,7 +834,7 @@ class ShootingStar(Bot):
                     await i.save(f'files/{i.filename}')
 
 
-                msg = {'id': len(plannedMsg)+1, 'channel': channel.id, 'time': int(day.timestamp()), 'msg': content, 'embed': attach}
+                msg = {'id': len(plannedMsg)+1, 'channel': channel.id, 'time': int(day.timestamp()), 'msg': content, 'embed': attach, 'author': context.author.id}
                 plannedMsg.append(msg)
                 self.bot.writeJSONTo('jsons/plannedMessages.json', plannedMsg)
                 if len(plannedMsg) == 1:
@@ -879,11 +915,12 @@ class ShootingStar(Bot):
 
             def getNextBirthdays(limit):
                 def getNextOccurence(rawDate):
-                    bdayDay = datetime.strptime(rawDate[0:10], '%Y-%m-%d')
                     now = datetime.now()
+                    bdayDay = datetime.strptime(rawDate[0:10], '%Y-%m-%d').replace(year=now.year)
 
-                    if now < bdayDay: bdayDay = bdayDay.replace(year=now.year)
-                    else: bdayDay = bdayDay.replace(year=now.year+1)
+                    print(f"Comparing BDays: {now} < {bdayDay}?")
+
+                    if now > bdayDay: bdayDay = bdayDay.replace(year=now.year+1)
 
                     return bdayDay + timedelta(hours=14)
 
@@ -1014,7 +1051,7 @@ class ShootingStar(Bot):
                         await channel.send(i['msg'], file=file)
                         os.remove(f"files/{i['embed'][0]}")
                     else:
-                        await channel.send(i['msg'])
+                        await self.sendMessage(channel, i['msg'], i['author'])
                 except Exception as e:
                     print(f"Failed to send message {i['id']}! Error: {e}")
                     newMsg.append(i)
@@ -1167,7 +1204,7 @@ class ShootingStar(Bot):
         self.twitchStatus.start()
 
     async def on_member_join(self, member):
-        # Add the member role
+        # Add the roles in the list.
         if self.settings['newcomers']['roles']['value'] is not []:
             for role in self.settings['newcomers']['roles']['value']:
                 try:
@@ -1175,26 +1212,23 @@ class ShootingStar(Bot):
                 except discord.Forbidden:
                     pass
 
+        # Add the member role if server isn't in Lockdown.
         if self.settings['moderation']['member']['value'] is not None and self.settings['moderation']['lockdownMode']['value'] is False:
             try:
                 await member.add_roles(discord.utils.get(member.guild.roles, id=self.settings['moderation']['member']['value']))
             except discord.Forbidden:
                 pass
 
-        embed = discord.Embed(title="User joined", color=discord.Colour.green(),
-                              description=f"User **{member.name}** joined the server.\nAccount created the: {member.created_at.day}/{member.created_at.month}/{member.created_at.year}")
-        # embed.set_thumbnail(url="attachment://icon_join.png")
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"User ID: {member.id}")
-        # await self.silent_logs.send(file=discord.File("images/icon_join.png"), embed=embed)
-
-        # await self.silent_logs.send(embed=embed)
+        # Adds the log if settings says to:
+        if self.settings['logs']['channel']['value'] is not None and self.settings['logs']['memberJoin']['value'] is True:
+            embed = self.bot.getDefaultEmbed("User joined", f"User **{member.name}** joined the server.\nAccount created the: {member.created_at.day}/{member.created_at.month}/{member.created_at.year}", member, discord.Colour.green())
+            await self.settings['logs']['channel']['value'].send(embed=embed)
 
     async def on_member_remove(self, member):
-        embed = discord.Embed(title="User left", color=discord.Colour.red(),
-                              description=f"User **{member.name}** left the server")
-        # embed.set_thumbnail(url="attachment://icon_join.png")
-        embed.set_footer(text=f"User ID: {member.id}")
+        # Adds the log if settings says to:
+        if self.settings['logs']['channel']['value'] is not None and self.settings['logs']['memberLeave']['value'] is True:
+            embed = self.bot.getDefaultEmbed("User left", f"User **{member.name}** left the server.", member, discord.Colour.red())
+            await self.settings['logs']['channel']['value'].send(embed=embed)
 
     async def on_member_update(self, member_old, member_new):
         if member_old.display_name != member_new.display_name:
@@ -1202,6 +1236,14 @@ class ShootingStar(Bot):
                                   description=f"User **{member_new.name}** changed their username.\nChange: {member_old.display_name} -> {member_new.display_name}")
             embed.set_thumbnail(url="attachment://icon_update.png")
             embed.set_footer(text=f"User ID: {member_new.id}")
+
+            # Adds the log if settings says to:
+            if self.settings['logs']['channel']['value'] is not None and self.settings['logs']['memberUpdate'][
+                'value'] is True:
+                embed = self.bot.getDefaultEmbed("User updated",
+                                                 f"User changed their display name: **{member_old.name} -> {member_new.name}**",
+                                                 member_new, discord.Colour.gold())
+                await self.settings['logs']['channel']['value'].send(embed=embed)
 
     ####################
     # USEFUL FUNCTIONS #
