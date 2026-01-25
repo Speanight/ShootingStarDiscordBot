@@ -919,7 +919,8 @@ class ShootingStar(Bot):
                 # Display the next X birthday
                 with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                     cur = con.cursor()
-                    res = cur.execute(f"select user, day, julianday(strftime('%Y', 'now')||strftime('-%m-%d', day))-julianday('now') as birthday from birthday LIMIT {limit}")
+                    # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
+                    res = cur.execute(f"SELECT user, day, julianday(CASE WHEN date(strftime('%Y', 'now') || '-' || strftime('%m-%d', day)) < date('now') THEN (strftime('%Y', 'now', '+1 year') || '-' || strftime('%m-%d', day)) ELSE (strftime('%Y', 'now') || '-' || strftime('%m-%d', day)) END) - julianday('now')+1 AS birthday FROM birthday ORDER BY birthday LIMIT {limit}")
                     res = res.fetchall()
 
                     if not res:

@@ -96,6 +96,9 @@ def initSettings():
             if key not in current:
                 print(f"Adding {key} to settings!")
                 current[key] = value
+            # If key expected value type is different than default one, change it.
+            if key == "type" and value != current[key]:
+                current[key] = value
             # Otherwise, if key exists but is a dict, recursive into it.
             elif isinstance(value, dict) and isinstance(current.get(key), dict):
                 merge_defaults(value, current[key])
