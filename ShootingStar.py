@@ -920,7 +920,7 @@ class ShootingStar(Bot):
                 with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                     cur = con.cursor()
                     # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
-                    res = cur.execute(f"SELECT user, day, julianday(CASE WHEN date(strftime('%Y', 'now') || '-' || strftime('%m-%d', day)) < date('now') THEN (strftime('%Y', 'now', '+1 year') || '-' || strftime('%m-%d', day)) ELSE (strftime('%Y', 'now') || '-' || strftime('%m-%d', day)) END) - julianday('now')+1 AS birthday FROM birthday ORDER BY birthday LIMIT {limit}")
+                    res = cur.execute(f"SELECT user, day, julianday(CASE WHEN date(strftime('%Y', 'now') || '-' || strftime('%m-%d', day)) < date('now') THEN strftime('%Y', 'now', '+1 year') || '-' || strftime('%m-%d', day) ELSE strftime('%Y', 'now') || '-' || strftime('%m-%d', day) END) - julianday(date('now')) AS birthday FROM birthday ORDER BY birthday LIMIT {limit}")
                     res = res.fetchall()
 
                     if not res:
@@ -932,7 +932,7 @@ class ShootingStar(Bot):
 
                         entry = {"user": f"<@{i[0]}>", "bday": date}
                         if entry['bday'].month == datetime.now().month and entry['bday'].day == datetime.now().day:
-                            msg += f"> {entry['user']} | 🎂 TODAY! WISH THEM HAPPY BDAY!\n"
+                            msg += f"> {entry['user']} | 🎂 TODAY! WISH THEM HAPPY BDAY!\n\n"
                         else:
                             msg += f"> {entry['user']} | <t:{int(entry['bday'].timestamp())}:d> (<t:{int(entry['bday'].timestamp())}:R>)\n"
                     return self.bot.getDefaultEmbed("Incoming birthdays", msg, context.author)
