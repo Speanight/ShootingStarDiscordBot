@@ -141,7 +141,7 @@ class ShootingStar(Bot):
                 channel = context.channel
                 if len(args) == 2: channel = args[0]
                 message = args[-1]
-                self.bot.sendMessage(channel, message, context.author)
+                await self.bot.sendMessage(channel, message, context.author)
 
 
     class Status(Command):
@@ -1172,9 +1172,8 @@ class ShootingStar(Bot):
         await super().on_ready()
         self.guild = self.guilds[0]
         print(f'Server: {self.guild.name}.')
-        if not isfile(f"{DB_FOLDER}{self.guild.id}"):
-            print(f"Creating DB...")
-            initDB(self.guild.id)
+        print(f"Creating DB...")
+        initDB(self.guild.id)
         print("Checking settings...")
         initSettings()
         self.settings = self.readJSONFrom('jsons/settings.json')

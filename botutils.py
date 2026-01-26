@@ -493,7 +493,7 @@ class Bot(discord.Client):
         with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
             cur = con.cursor()
             cur.execute("INSERT INTO message (user, channel, message) VALUES (?, ?, ?)",
-                        (author.id, channel.id, msg.id))
+                        (author, channel.id, msg.id))
         return True
 
 
