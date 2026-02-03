@@ -1,3 +1,5 @@
+from random import randint
+
 import discord
 import logging
 from datetime import datetime
@@ -8,6 +10,7 @@ from datetime import datetime, timedelta, date
 import tzlocal
 import pytz
 import sqlite3
+from random import randint
 
 
 class Starcron(Bot):
@@ -40,6 +43,33 @@ class Starcron(Bot):
 
         return msg
 
+    def addMangos(self):
+        print(f'Adding mangos to {self.guild.id}')
+
+        news = randint(1, 5)
+        amt = news
+
+        mangos = self.readJSONFrom(MANGO_FILE)
+
+        mangos['users'] = []
+
+        for mango in mangos['mangos']:
+            mango['delay'] = mango['delay'] + 1
+
+            # Removes mangos that are standing still for 3 days:
+            if mango['delay'] == 3:
+                mangos.remove(mango)
+            else:
+                amt += mango['amount']
+
+        # TODO: write architecture somewhere!
+        mangos['mangos'].append(newMango)
+        for i in range(0, news):
+            mangos['mangos'].append()
+        self.writeJSONTo(MANGO_FILE, mangos)
+
+        return amt
+
     async def on_ready(self):
         await super().on_ready()
         # connects botcron to guild
@@ -63,6 +93,14 @@ class Starcron(Bot):
             if msg is not None:
                 channel = self.guild.get_channel(self.settings['birthday']['channel']['value'])
                 await channel.send(msg)
+
+        # Task 2 - Add mango to the basket
+        print("Adding mangos...")
+        if self.settings['mango']['enable']['value']:
+            msg = self.addMangos()
+            if self.settings['mango']['channel']['value'] is not None:
+                channel = self.settings['mango']['channel']['value']
+                await channel.send(f"🥭 - There is now {msg} mangos available! Claim them with !mango claim <amount>")
 
 if __name__ == "__main__":
     sc = Starcron()

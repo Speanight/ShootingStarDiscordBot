@@ -28,6 +28,23 @@
       "description": "Defines the channel in which Shooting Star should wish happy BDay. Setting this to null disables all bday wishes and make ponies sad :c"
     }
   },
+  "mango": {
+    "enable": {
+      "value": true,
+      "type": "BOOL",
+      "description": "Defines if Shooting Star should gib mangoes to pones!"
+    },
+    "channel": {
+      "value": null,
+      "type": "!CHANNEL",
+      "description": "Defines the channel in which Shooting Star will announce when new mangoes arrive!"
+    },
+    "limit": {
+      "value": 1,
+      "type": "INT",
+      "description": "Defines how many mangoes can a user take per day. Sharing is caring, after all!"
+    }
+  },
   "newcomers": {
     "roles": {
       "value": [],
@@ -89,6 +106,11 @@
       "value": null,
       "type": "!ROLE",
       "description": "Role given to staff. Useful to let them use commands"
+    },
+    "trialstaff": {
+      "value": null,
+      "type": "!ROLE",
+      "description": "Role given to trial staff. Useful to let them use commands"
     },
     "admin": {
       "value": null,

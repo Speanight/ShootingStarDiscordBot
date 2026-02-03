@@ -48,6 +48,11 @@ def initDB(name):
         #
         #                 """)
 
+        cur.execute("""CREATE TABLE IF NOT EXISTS mango (
+                        user INTEGER PRIMARY KEY,
+                        mangoCount INTEGER NOT NULL
+                        )""")
+
         cur.execute("""CREATE TABLE IF NOT EXISTS message (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user INTEGER NOT NULL,

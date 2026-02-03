@@ -5,6 +5,7 @@ import asyncio
 WARNS_FILE = "jsons/warns.json"
 BIRTHDAYS_FILE = "jsons/birthdays.json"
 PRIVILEGED_FILE = "jsons/privileged.json"
+MANGO_FILE = "jsons/mango.json"
 DB_FOLDER = 'db/'
 VERSION = "1.0.1"
 
@@ -51,10 +52,11 @@ class AuthorizationLevel(Enum):
     # Roles ID
     NONE = 0
     MEMBER = 1
-    STAFF = 2
-    ADMIN = 3
-    PRIVILEGED = 4
-    OWNER = 5
+    TRIALSTAFF = 2
+    STAFF = 3
+    ADMIN = 4
+    PRIVILEGED = 5
+    OWNER = 6
 
     def __repr__(self):
         return str(self.name)
@@ -75,6 +77,7 @@ class AuthorizationLevel(Enum):
         owner_id = settings['moderation']['owner']['value']
         admin_role_id = settings['moderation']['admin']['value']
         staff_role_id = settings['moderation']['staff']['value']
+        trialstaff_role_id = settings['moderation']['trialstaff']['value']
         member_role_id = settings['moderation']['member']['value']
 
         roles = [role.id for role in member.roles]
@@ -85,6 +88,8 @@ class AuthorizationLevel(Enum):
             return AuthorizationLevel.ADMIN
         elif staff_role_id in roles:
             return AuthorizationLevel.STAFF
+        elif trialstaff_role_id in roles:
+            return AuthorizationLevel.TRIALSTAFF
         elif member_role_id in roles:
             return AuthorizationLevel.MEMBER
         else:

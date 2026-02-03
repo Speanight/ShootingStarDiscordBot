@@ -83,7 +83,7 @@ class ShootingStar(Bot):
 
     class Purge(Command):
         description = "Clears last X messages in the corresponding channel. Defaults to setting value if no number is given."
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.TRIALSTAFF
         syntax = [[], [Lexeme.INT]]
 
         async def run(self, context, args):
@@ -206,7 +206,7 @@ class ShootingStar(Bot):
 
     class Info(Command):
         description = "Gets moderating info about USER."
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.TRIALSTAFF
         syntax = [[Lexeme.USER]]
 
         async def run(self, context, args):
@@ -504,7 +504,7 @@ class ShootingStar(Bot):
         description = ("Mutes a user for specified time and reason\n"
                        "Quick reminder that a 'duration' should be used with this syntax: 1d2h3m to mute the user"
                        "for one day, two hours and three minutes.")
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.TRIALSTAFF
         syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.DURATION], [Lexeme.USER, Lexeme.TEXT, Lexeme.DURATION], [Lexeme.USER, Lexeme.DURATION, Lexeme.TEXT]]
 
         async def run(self, context, args):
@@ -538,7 +538,7 @@ class ShootingStar(Bot):
 
     class Unmute(Command):
         description = "Unmutes an user if that user was muted before. This will remove any pending duration."
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.TRIALSTAFF
         syntax = [[Lexeme.USER]]
 
         async def run(self, context, args):
@@ -566,7 +566,7 @@ class ShootingStar(Bot):
 
     class Warn(Command):
         description = "Warns user for specified reason (if specified)"
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.TRIALSTAFF
         syntax = [[Lexeme.USER], [Lexeme.USER, Lexeme.TEXT]]
 
         async def run(self, context, args):
@@ -797,7 +797,7 @@ class ShootingStar(Bot):
 
     class Uptime(Command):
         description = "Shows how long Shooting Star has been online for."
-        authorizationLevel = AuthorizationLevel.STAFF
+        authorizationLevel = AuthorizationLevel.TRIALSTAFF
         syntax = [[]]
 
         async def run(self, context, args):
@@ -896,6 +896,62 @@ class ShootingStar(Bot):
     ##################
     # "FUN" COMMANDS #
     ##################
+    class Mango(Command):
+        description = ""
+        authorizationLevel = AuthorizationLevel.MEMBER
+        syntax = [[Lexeme.TEXT]]
+
+        async def run(self, context, args):
+            action = (args + [None] * 1)[:1]
+
+            CLAIM = ["!", "claim", "get", "nom", "add", "take", "mine", "minenow"]
+            GIVE = [">", "give", "gib", "given", "fren", "foru", "forchu"]
+            LET = ["/", "let", "rm", "remove", "place", "public", "nuhuh", "nuh", "no"]
+            SEE = ["v", "see", "watch", "list", "ls", "howmany", "howmuch", "owo"]
+            LEADERBOARD = ["?", "leaderboard", "ldb", "top", "who", "whobest" "ewe"]
+
+            msg = "Something went wrong! Ohnoeees! Sorry I couldn't exhaust your wishes! :c"
+
+            def claim():
+                mangos = self.bot.readJSONFrom(MANGO_FILE)
+
+                if not mangos['mangos']:
+                    return -2
+
+                if context.author.id in mangos['users']:
+                    if mangos['users'][context.author.id]['count'] == self.bot.settings['mango']['limit']['value']:
+                        return -1
+
+                return 0
+
+
+            def give():
+                pass
+
+            def let():
+                pass
+
+            def see():
+                pass
+
+            def leaderboard():
+                pass
+
+            if action in CLAIM:
+                val = claim()
+                if val == -1:
+                    msg = f"Hey <@{context.author.id}>, share some mangoes with the others! >:C You'll be able to grab some more when the next batch arrives."
+                elif val > 0:
+                    msg = f"I just added 1 mango 🥭 to your account, <@{context.author.id}>! You now have {val} mango(s)!"
+
+            elif action in GIVE: give()
+            elif action in LET: let()
+            elif action in SEE: see()
+            elif action in LEADERBOARD: leaderboard()
+
+            await context.channel.send(msg)
+
+
     class Birthday(Command):
         description = ("Shooting Star can wish you happy birthday! Add your birthday with __!birthday add DD/MM__ (or DD/MM/YYYY if you want her to know your age too!)\n"
                        "If you want to show the next X birthdays, you just have to type __!birthday X__ (or without argument to show the next few ones)!\n"
