@@ -44,31 +44,26 @@ class Starcron(Bot):
         return msg
 
     def addMangos(self):
-        print(f'Adding mangos to {self.guild.id}')
-
-        news = randint(1, 5)
-        amt = news
+        news = randint(1, self.settings['mango']['randomLimit']['value'])
 
         mangos = self.readJSONFrom(MANGO_FILE)
 
-        mangos['users'] = []
+        mangos['users'] = {}
 
         for mango in mangos['mangos']:
             mango['delay'] = mango['delay'] + 1
 
             # Removes mangos that are standing still for 3 days:
-            if mango['delay'] == 3:
-                mangos.remove(mango)
-            else:
-                amt += mango['amount']
+            if mango['delay'] >= self.settings['mango']['mangoExpire']['value']:
+                mangos['mangos'].remove(mango)
 
-        # TODO: write architecture somewhere!
-        mangos['mangos'].append(newMango)
         for i in range(0, news):
-            mangos['mangos'].append()
+            mangos['mangos'].append({"delay": 0})
+
+        mangos['mangos'] = mangos['mangos'][:self.settings['mango']['limit']['value']]
         self.writeJSONTo(MANGO_FILE, mangos)
 
-        return amt
+        return len(mangos['mangos'])
 
     async def on_ready(self):
         await super().on_ready()
@@ -99,8 +94,8 @@ class Starcron(Bot):
         if self.settings['mango']['enable']['value']:
             msg = self.addMangos()
             if self.settings['mango']['channel']['value'] is not None:
-                channel = self.settings['mango']['channel']['value']
-                await channel.send(f"🥭 - There is now {msg} mangos available! Claim them with !mango claim <amount>")
+                channel = self.guild.get_channel(self.settings['mango']['channel']['value'])
+                await channel.send(f"🔔 Mango batch deliveryy! <: 🥭 - There is now **{msg} mangos** available! Claim them with `!mango claim`")
 
 if __name__ == "__main__":
     sc = Starcron()

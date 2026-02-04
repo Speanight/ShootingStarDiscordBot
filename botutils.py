@@ -7,7 +7,7 @@ BIRTHDAYS_FILE = "jsons/birthdays.json"
 PRIVILEGED_FILE = "jsons/privileged.json"
 MANGO_FILE = "jsons/mango.json"
 DB_FOLDER = 'db/'
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 
 ##### COMMANDS UTILS #####
 COMMAND_ADD = ["add", "adds", "new", "+"]

@@ -39,10 +39,25 @@
       "type": "!CHANNEL",
       "description": "Defines the channel in which Shooting Star will announce when new mangoes arrive!"
     },
-    "limit": {
+    "randomLimit": {
+      "value": 2,
+      "type": "INT",
+      "description": "Defines how many max. mango can appear per new batch (once per day by default - runs with cron job.)"
+    },
+    "mangoExpire": {
+      "value": 3,
+      "type": "INT",
+      "description": "Defines after how many batches mangoes expire. (X days by default - runs with cron job.)"
+    },
+    "userLimit": {
       "value": 1,
       "type": "INT",
       "description": "Defines how many mangoes can a user take per day. Sharing is caring, after all!"
+    },
+    "limit": {
+      "value": 10,
+      "type": "INT",
+      "description": "Defines how many maximum mangoes can be standing in public!"
     }
   },
   "newcomers": {

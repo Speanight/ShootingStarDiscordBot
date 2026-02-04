@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from botutils import ModActions, DB_FOLDER
+from botutils import ModActions, DB_FOLDER, MANGO_FILE
 from os.path import isfile
 
 
@@ -50,7 +50,7 @@ def initDB(name):
 
         cur.execute("""CREATE TABLE IF NOT EXISTS mango (
                         user INTEGER PRIMARY KEY,
-                        mangoCount INTEGER NOT NULL
+                        mango INTEGER NOT NULL
                         )""")
 
         cur.execute("""CREATE TABLE IF NOT EXISTS message (
@@ -78,6 +78,14 @@ def initDB(name):
         con.commit()
 
 def initSettings():
+    # Create the mango file if needed.
+    if not isfile(MANGO_FILE):
+        mangoes = {}
+        mangoes['users'] = {}
+        mangoes['mangos'] = []
+        with open(MANGO_FILE, 'w') as f:
+            f.write(json.dumps(mangoes))
+
     # Checks that default settings exists.
     if not isfile('jsons/defaultSettings.json'):
         print("defaultSettings.json file doesn't exist!")
