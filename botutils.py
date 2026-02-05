@@ -1,6 +1,7 @@
 # MIT Licence
 # authors: Luna and Yashn
 import asyncio
+import pkgutil
 
 WARNS_FILE = "jsons/warns.json"
 BIRTHDAYS_FILE = "jsons/birthdays.json"
@@ -35,6 +36,10 @@ import tzlocal
 import pytz
 import re
 import os
+import pkgutil
+import importlib
+import inspect
+import commands
 
 
 class ModActions(Enum):
@@ -128,6 +133,11 @@ class Context:
 
 class Command:
     prefix = "!"
+    syntax = []         # Default syntax (will be ignored)
+    name = None         # Can be changed (if needed)
+    bot = None          # Will be replaced by init.
+    aliases = []        # Can be changed to an array (if needed)
+    lockdown = False    # Set to true if you want a command to be on lockdown.
 
     def getCorrectSyntax(self):
         syntaxes = []
@@ -243,6 +253,12 @@ class Command:
         # PARSING
         # parsing step
         parsedInput, lexemes = self.lexemize(message)
+
+        # If no input awaited, just run. (command will ignore or do its things with it)
+        if not self.syntax:
+            await self.run(Context(message.author, message.channel, message), parsedInput[1:])
+            return
+
         # if parsing or syntax check fail: stop here and print correct command's syntax
         if parsedInput is None or lexemes[1:] not in self.syntax:
             await message.channel.send(
@@ -257,7 +273,7 @@ class Command:
         for item in range(len(lexemes)):
             # is mentioned role existing on the guild?
             if lexemes[item] == Lexeme.ROLE:
-                if message.guild.get_role(parsedInput[item]) != None:
+                if message.guild.get_role(parsedInput[item]) is not None:
                     parsedInput[item] = message.guild.get_role(parsedInput[item])
                 else:
                     await message.channel.send(
@@ -274,7 +290,7 @@ class Command:
                     # return
             # is mentioned channel existing on the guild?
             elif lexemes[item] == Lexeme.CHANNEL:
-                if message.guild.get_channel(parsedInput[item]) != None:
+                if message.guild.get_channel(parsedInput[item]) is not None:
                     parsedInput[item] = message.guild.get_channel(parsedInput[item])
                 else:
                     await message.channel.send(
@@ -295,11 +311,29 @@ class Bot(discord.Client):
         super().__init__(intents=intents)
 
         # create dictionnary of name/commands defined here
-        self.commands = {cmd.__name__.lower(): cmd() for cmd in
-                         [cls_attribute for cls_attribute in self.__class__.__dict__.values() if
-                          inspect.isclass(cls_attribute) and issubclass(cls_attribute, Command)]}
-        # gives access to the bot to commands
-        for command in self.commands.values(): command.bot = self
+        self.commands = {}
+        self.aliases = {}
+
+        # Checks the commands in the 'commands' folder recursively:
+        for module_info in pkgutil.walk_packages(commands.__path__, commands.__name__ + "."):
+            module = importlib.import_module(module_info.name)
+
+            for _, obj in inspect.getmembers(module, inspect.isclass):
+                if issubclass(obj, Command) and obj is not Command:
+                    instance = obj()
+                    instance.bot = self
+
+                    name = obj.name or obj.__name__.lower()
+
+                    if not obj.lockdown:
+                        self.commands[name] = instance
+
+                    for i in obj.aliases:
+                        self.aliases[i] = instance
+
+            self.allCommands = {**self.commands, **self.aliases}
+
+
         self.settings = self.readJSONFrom('jsons/settings.json')
 
     async def on_ready(self):
@@ -312,11 +346,11 @@ class Bot(discord.Client):
     def getCommand(self, message):
         first = message.content.split()[0]
         # does the command exists?
-        if first[0] == Command.prefix and first[1:] in list(self.commands.keys()):
+
+        if first[0] == Command.prefix and first[1:] in list(self.allCommands.keys()):
             # does the member has the minimum authorizationLevel to call it?
-            if self.commands[first[1:]].authorizationLevel.value <= AuthorizationLevel.getMemberAuthorizationLevel(
-                    message.author).value:
-                return self.commands[first[1:]]
+            if self.allCommands[first[1:]].authorizationLevel.value <= AuthorizationLevel.getMemberAuthorizationLevel(message.author).value:
+                return self.allCommands[first[1:]]
             else:
                 return None
         else:
@@ -398,8 +432,6 @@ class Bot(discord.Client):
                 if not checkTypeCompatibility(type, i):
                     return False  # Return if one of the value doesn't correspond to expected type
                 value.append(checkTypeCompatibility(type, i))
-
-                # TODO: Fix settings qui ne peuvent pas être append si array!
 
         # Otherwise, check compatibility of the value.
         else:
