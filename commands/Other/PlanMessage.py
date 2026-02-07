@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme, COMMAND_ADD, COMMAND_LIST, COMMAND_PREVIEW
+from botutils import *
 
 class PlanMessage(Command):
     description = ('Allows the bot to plan sending a message at a specific time. Here are the expected syntaxes:\n'

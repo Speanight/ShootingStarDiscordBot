@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme
+from botutils import *
 
 class Quote(Command):
     description = ('Allows you to add, list or get details of a quote.\n'

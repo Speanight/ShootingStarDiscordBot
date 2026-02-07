@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme
+from botutils import *
 import discord
 
 class Status(Command):

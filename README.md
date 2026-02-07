@@ -24,6 +24,7 @@ If you're looking for one bot that would do all of this (and more to come!) inst
    3. tzlocal
    4. datetime
    5. python-dotenv
+   6. pkgutil
 5. You need to create a file in images/ called BotPFP.png. This will be used in embed.
 6. You also need to create a `.env` file with the following content:
 ```

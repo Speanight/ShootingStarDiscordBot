@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme, DB_FOLDER, COMMAND_LIST
+from botutils import *
 import sqlite3
 
 class Say(Command):

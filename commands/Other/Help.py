@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme
+from botutils import *
 
 class Help(Command):
     description = ("Shows help for commands. Shows every available command if written by itself, otherwise gives a"

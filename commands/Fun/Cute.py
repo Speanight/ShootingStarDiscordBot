@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel
+from botutils import *
 import random
 from datetime import datetime
 

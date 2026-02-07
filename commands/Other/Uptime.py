@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel
+from botutils import *
 from datetime import datetime
 
 class Uptime(Command):

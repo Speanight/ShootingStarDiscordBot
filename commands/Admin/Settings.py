@@ -1,4 +1,4 @@
-from botutils import Command, Lexeme, AuthorizationLevel
+from botutils import *
 
 class Settings(Command):
     description = f"Gives a quick recap of settings. Values can be modified with <help/add/rm/update> <path/to/setting> <value>."

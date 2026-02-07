@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel
+from botutils import *
 
 class Ping(Command):
     description = "Allows you to test connection with me!"

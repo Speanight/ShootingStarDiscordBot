@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, VERSION
+from botutils import *
 from datetime import datetime
 import requests
 import discord

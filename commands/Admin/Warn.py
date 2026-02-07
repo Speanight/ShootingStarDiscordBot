@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme, ModActions
+from botutils import *
 
 class Warn(Command):
     description = "Warns user for specified reason (if specified)"

@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme
+from botutils import *
 
 class Purge(Command):
     description = "Clears last X messages in the corresponding channel. Defaults to setting value if no number is given."

@@ -1,4 +1,4 @@
-from botutils import Command, AuthorizationLevel, Lexeme, ModActions
+from botutils import *
 from datetime import datetime, timedelta
 
 class Mute(Command):
