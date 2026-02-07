@@ -127,8 +127,8 @@ class Mango(Command):
                 if len(res) >= 2: msg += f"🥈 **<@{res[1][0]}>** with **{res[1][1]}** mangoes. 🥭\n"
                 if len(res) >= 3:
                     msg += f"🥉 **<@{res[2][0]}>** with **{res[2][1]}** mangoes. 🥭\n"
-                    res = res[2:]
-                    place = 3
+                    res = res[3:]
+                    place = 4
                     for i in res:
                         msg += f"{place}th: **<@{i[0]}>** with {i[1]} mangoes. 🥭\n"
 
