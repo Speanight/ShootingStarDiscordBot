@@ -192,7 +192,7 @@ class Mango(Command):
             if AuthorizationLevel.getMemberAuthorizationLevel(context.author.id) >= AuthorizationLevel.PRIVILEGED:
                 if len(args) == 3:  count = args[2]
                 else:               count = 0
-                val = updateMangoCount(pinged.id, count, False)
+                val = updateMangoCount(pinged, count, False)
 
                 msg = f"User <@{pinged.id}> now has {val} mango(es)!"
 
