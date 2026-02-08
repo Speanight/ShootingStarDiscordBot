@@ -189,7 +189,7 @@ class Mango(Command):
                 f"Have fun grabbing those mangoes!")
 
         elif action in COMMAND_UPDATE:
-            if AuthorizationLevel.getMemberAuthorizationLevel(context.author) >= AuthorizationLevel.PRIVILEGED:
+            if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.PRIVILEGED.value:
                 if len(args) == 3:  count = args[2]
                 else:               count = 0
                 val = updateMangoCount(pinged.id, count, False)
