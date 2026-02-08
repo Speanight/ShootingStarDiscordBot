@@ -5,7 +5,7 @@ import sqlite3
 class Mango(Command):
     description = ""
     authorizationLevel = AuthorizationLevel.MEMBER
-    syntax = [[], [Lexeme.ACTION], [Lexeme.TEXT], [Lexeme.TEXT, Lexeme.USER]]
+    syntax = [[], [Lexeme.ACTION], [Lexeme.TEXT], [Lexeme.TEXT, Lexeme.USER], [Lexeme.ACTION, Lexeme.USER, Lexeme.INT]]
 
     async def run(self, context, args):
         action, pinged = (args + [None] * 2)[:2]
@@ -18,7 +18,7 @@ class Mango(Command):
 
         msg = "Something went wrong! Ohnoeees! Sorry I couldn't exhaust your wishes! :c"
 
-        def updateMangoCount(user, count):
+        def updateMangoCount(user, count, add=True):
             with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                 cur = con.cursor()
                 # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
@@ -36,8 +36,8 @@ class Mango(Command):
                     else:
                         return -1
                 else:
-                    mango = res[0] + count
-                    print(f"{mango} = {res[0]} + {count}")
+                    if add: mango = res[0] + count
+                    else:   mango = count
                     if mango >= 0:
                         cur.execute("""
                                     UPDATE mango
@@ -80,7 +80,7 @@ class Mango(Command):
             if not pinged:
                 return -1
 
-            if updateMangoCount(context.author.id, -1):
+            if updateMangoCount(context.author.id, -1) >= 0:
                 if updateMangoCount(pinged.id, 1):
                     return 0
                 return -3
@@ -116,7 +116,7 @@ class Mango(Command):
             with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                 cur = con.cursor()
                 # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
-                res = cur.execute(f"SELECT * FROM mango ORDER BY mango DESC LIMIT 10")
+                res = cur.execute(f"SELECT * FROM mango ORDER BY mango DESC LIMIT 5")
                 res = res.fetchall()
 
                 if res is None:
@@ -131,6 +131,7 @@ class Mango(Command):
                     place = 4
                     for i in res:
                         msg += f"{place}th: **<@{i[0]}>** with {i[1]} mangoes. 🥭\n"
+                        place += 1
 
                 return msg
 
@@ -186,6 +187,14 @@ class Mango(Command):
                 f"And finally, you can **check the leaderboard** with `!mango leaderboard`!\n\n"
 
                 f"Have fun grabbing those mangoes!")
+
+        elif action in COMMAND_UPDATE:
+            if AuthorizationLevel.getMemberAuthorizationLevel(context.author.id) >= AuthorizationLevel.PRIVILEGED:
+                if len(args) == 3:  count = args[2]
+                else:               count = 0
+                val = updateMangoCount(pinged.id, count, False)
+
+                msg = f"User <@{pinged.id}> now has {val} mango(es)!"
 
         else:
             userMangoes, totalMangoes = see()
