@@ -39,11 +39,11 @@ class Starcron(Bot):
 
             msg += f"Happy birthday to {entry['user']}"
             # 1900 is default value for date, checking if age was given by person...
-            if entry['age'] != 1900: msg += f", they're now {entry['age']} years old"
+            if entry['age'] != 1900: msg += f", they're now {datetime.now().year - entry['age']} years old"
             msg += "! I've given you 5 mangoes to celebrate.\n"
 
             # Give mangoes for birthday
-            self.bot.updateMangoCount(i[0], count=self.settings['mango']['birthdayReward']['value'])
+            self.updateMangoCount(i[0], count=self.settings['mango']['birthdayReward']['value'])
 
         return msg
 
@@ -110,12 +110,13 @@ class Starcron(Bot):
                     msg = None
                     log.status = LogStatus.ERROR
                     log.message = str(e)
-                if msg is not None:
-                    channel = self.guild.get_channel(self.settings['birthday']['channel']['value'])
-                    await channel.send(msg)
-                    log.message = "Birthdays found and sent in channel"
-                else:
-                    log.message = "No birthdays found!"
+                if log.status != LogStatus.ERROR:
+                    if msg is not None:
+                        channel = self.guild.get_channel(self.settings['birthday']['channel']['value'])
+                        await channel.send(msg)
+                        log.message = "Birthdays found and sent in channel"
+                    else:
+                        log.message = "No birthdays found!"
             else:
                 log.status = LogStatus.INFO
                 log.message = "Birthday feature disabled"
