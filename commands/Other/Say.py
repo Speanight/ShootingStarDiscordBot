@@ -9,7 +9,6 @@ class Say(Command):
     syntax = [[Lexeme.TEXT], [Lexeme.CHANNEL, Lexeme.TEXT], [Lexeme.ACTION], [Lexeme.ACTION, Lexeme.INT]]
 
     async def run(self, context, args):
-        # TODO: check that say command is working.
         if args[0] == COMMAND_LIST:
             msgId = None
             query = "SELECT * FROM message"

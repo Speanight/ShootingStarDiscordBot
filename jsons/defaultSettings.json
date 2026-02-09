@@ -54,10 +54,20 @@
       "type": "INT",
       "description": "Defines how many mangoes can a user take per day. Sharing is caring, after all!"
     },
+    "resetAtBatches": {
+      "value": true,
+      "type": "BOOL",
+      "description": "Defines if users should see their limits reset with every batch (if true), or every single day (if false)"
+    },
     "limit": {
       "value": 10,
       "type": "INT",
       "description": "Defines how many maximum mangoes can be standing in public!"
+    },
+    "birthdayReward": {
+      "value": 5,
+      "type": "INT",
+      "description": "Defines how many mangoes will be given on someone's birthday."
     }
   },
   "newcomers": {
@@ -109,6 +119,11 @@
       "value": null,
       "type": "!CHANNEL",
       "description": "If things don't work out, this will be the channel where errors will be printed!"
+    },
+    "keepFor": {
+      "value": 0,
+      "type": "INT",
+      "description": "Says for how many days JSON logs will be kept for. Oldest entries will be deleted. Set to 0 to not delete anything."
     }
   },
   "moderation": {

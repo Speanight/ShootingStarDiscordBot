@@ -17,39 +17,6 @@ class Mango(Command):
         LEADERBOARD = ["?", "leaderboard", "ldb", "top", "who", "whobest" "ewe"]
 
         msg = "Something went wrong! Ohnoeees! Sorry I couldn't exhaust your wishes! :c"
-
-        def updateMangoCount(user, count, add=True):
-            with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                cur = con.cursor()
-                # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
-                res = cur.execute(f"SELECT mango FROM mango WHERE user = ?", (user,))
-                res = res.fetchone()
-
-                if res is None:
-                    if count > 0:
-                        cur.execute("""
-                                    INSERT INTO mango (user, mango)
-                                    VALUES (?, ?)
-                                    """, (user, count))
-                        con.commit()
-                        mango = count
-                    else:
-                        return -1
-                else:
-                    if add: mango = res[0] + count
-                    else:   mango = count
-                    if mango >= 0:
-                        cur.execute("""
-                                    UPDATE mango
-                                    SET mango = ?
-                                    WHERE user = ?
-                                    """, (mango, user))
-                    else:
-                        mango = mango - count
-                        return -1
-
-            return mango
-
         def claim():
             mangos = self.bot.readJSONFrom(MANGO_FILE)
 
@@ -70,7 +37,7 @@ class Mango(Command):
                 mangos['users'][userID] = {}
                 mangos['users'][userID]['count'] = 1
 
-            val = updateMangoCount(context.author.id, +1)
+            val = self.bot.updateMangoCount(context.author.id, +1)
 
             self.bot.writeJSONTo(MANGO_FILE, mangos)
 
@@ -80,8 +47,8 @@ class Mango(Command):
             if not pinged:
                 return -1
 
-            if updateMangoCount(context.author.id, -1) >= 0:
-                if updateMangoCount(pinged.id, 1):
+            if self.bot.updateMangoCount(context.author.id, -1) >= 0:
+                if self.bot.updateMangoCount(pinged.id, 1):
                     return 0
                 return -3
             return -2
@@ -92,7 +59,7 @@ class Mango(Command):
             if len(mangos['mangos']) == self.bot.settings['mango']['limit']['value']:
                 return -1
 
-            if updateMangoCount(context.author.id, -1) >= 0:
+            if self.bot.updateMangoCount(context.author.id, -1) >= 0:
                 mangos['mangos'].append({"delay": 0})
                 self.bot.writeJSONTo(MANGO_FILE, mangos)
                 return 0
@@ -192,7 +159,7 @@ class Mango(Command):
             if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.PRIVILEGED.value:
                 if len(args) == 3:  count = args[2]
                 else:               count = 0
-                val = updateMangoCount(pinged.id, count, False)
+                val = self.bot.updateMangoCount(pinged.id, count, False)
 
                 msg = f"User <@{pinged.id}> now has {val} mango(es)!"
 

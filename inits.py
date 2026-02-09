@@ -66,8 +66,6 @@ def initDB(name):
                         author INTEGER NOT NULL,
                         quote TEXT NOT NULL)""")
 
-        # TODO: Continue DB
-
         actions = [i for i in ModActions]
 
         for i, action in enumerate(actions, start=1):

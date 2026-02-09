@@ -7,6 +7,8 @@ WARNS_FILE = "jsons/warns.json"
 BIRTHDAYS_FILE = "jsons/birthdays.json"
 PRIVILEGED_FILE = "jsons/privileged.json"
 MANGO_FILE = "jsons/mango.json"
+CRON_LOGS = "logs/cronlog.json"
+
 DB_FOLDER = 'db/'
 VERSION = "1.1.0"
 
@@ -313,6 +315,7 @@ class Bot(discord.Client):
         # create dictionnary of name/commands defined here
         self.commands = {}
         self.aliases = {}
+        self.guild = None
 
         # Checks the commands in the 'commands' folder recursively:
         for module_info in pkgutil.walk_packages(commands.__path__, commands.__name__ + "."):
@@ -445,6 +448,38 @@ class Bot(discord.Client):
         self.writeJSONTo('jsons/settings.json', self.settings)
         self.settings = self.readJSONFrom('jsons/settings.json')
         return True  # And return true
+
+    def updateMangoCount(self, user, count, add=True):
+        with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
+            cur = con.cursor()
+            # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
+            res = cur.execute(f"SELECT mango FROM mango WHERE user = ?", (user,))
+            res = res.fetchone()
+
+            if res is None:
+                if count > 0:
+                    cur.execute("""
+                                INSERT INTO mango (user, mango)
+                                VALUES (?, ?)
+                                """, (user, count))
+                    con.commit()
+                    mango = count
+                else:
+                    return -1
+            else:
+                if add: mango = res[0] + count
+                else:   mango = count
+                if mango >= 0:
+                    cur.execute("""
+                                UPDATE mango
+                                SET mango = ?
+                                WHERE user = ?
+                                """, (mango, user))
+                else:
+                    mango = mango - count
+                    return -1
+
+        return mango
 
     def manualUpdateSetting(self, setting, value):
         TWITCH_ID = getEnv('TWITCH_ID')
