@@ -10,7 +10,7 @@ MANGO_FILE = "jsons/mango.json"
 CRON_LOGS = "logs/cronlog.json"
 
 DB_FOLDER = 'db/'
-VERSION = "1.1.0"
+VERSION = "1.1.1b0"
 
 ##### COMMANDS UTILS #####
 COMMAND_ADD = ["add", "adds", "new", "+"]

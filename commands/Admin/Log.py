@@ -2,7 +2,10 @@ from botutils import *
 from Objects import LogStatus
 
 class Log(Command):
-    description = ""
+    description = ("Outputs logs data. Use no argument to see all available logs.\n"
+                   "First argument is the log file to check (ie: 'cron' will check for cron logs).\n"
+                   "Second argument is the verbosity (1 = Everything, 2 = Info, 3 = Warn, 4 = Errors.\n"
+                   "Third argument is the name of the array (aka the date, often). ie: 2020-01-01.")
     authorizationLevel = AuthorizationLevel.STAFF
     syntax = [[], [Lexeme.TEXT], [Lexeme.TEXT, Lexeme.INT], [Lexeme.TEXT, Lexeme.INT, Lexeme.TEXT]]
 

@@ -55,36 +55,36 @@ After=network.target
 Type=simple
 Restart=always
 RestartSec=1
-User=ShootingStar
-WorkingDirectory=/var/discordBot
-ExecStart=/srv/python/venv/bin/python3 /var/discordBot/ShootingStar.py
+User=yourBotUsername
+WorkingDirectory=/path/to/bot/folder
+ExecStart=/python/command # Don't forget to use a venv eventually!
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ## Updates
-**Version 1.0.0:** First release of the bot. So far, the bot is able to do basic moderation actions, as well as twitch actions and plan messages.
+- **Version 1.1.1b0:** _[BETA RELEASE]_ - Added `!gamble` as a function, for users to gamble their mangoes. Crontab can be executed more than once per day, to execute some (not all!) tasks multiple times in one day.
+- **Version 1.1.0:** (Much) better architecture for the bot. Added `!mango` as a command. Added aliases support, fixed license and a `!planMessage` bug.
+- **Version 1.0.0:** First release of the bot. So far, the bot is able to do basic moderation actions, as well as twitch actions and plan messages.
 
 ## Upcoming changes
 > [!NOTE]
 > The changes noted here are potential improvements for the bot, taken from my personal use as well as potential suggestions. None of what is written down there is actually planned, but more of a general idea of the direction that I will be taking with this bot development.
 
-- **Needs to be fixed**
-  - Privileged access through SQLite
-  - Some commands might not work and still have their description in French due to adaptation of bot.
 - **Being Worked on**
-  - Auto announcement of Twitch schedule
+  - Better logging of actions, fails, errors, ...
+  - Some more "fun" commands for community purposes.
 - **Being considered**
-  - More member commands (8ball, custom commands, random % generator, ...)
+  - Auto announcement of Twitch schedule
 
 ## Thanks, licenses and more
-Everyone is free to use the bot and fork it as long as mentions are added (minimum repo, embed footer in discord or a command for sources would be greatly appreciated!)
+Everyone is free to use the bot and fork it as long as mentions are added (minimum repo, keeping the embed footer in discord or a command for sources would be greatly appreciated!)
 
 Feel free to copy/paste the following text if needed:
 
 ```
-Shooting Star bot - https://github.com/Speanight
+Shooting Star bot - https://github.com/Speanight/ShootingStarDiscordBot
 Created by Furball
 Base of the bot made by Yashn37 and Furball.
 ```
