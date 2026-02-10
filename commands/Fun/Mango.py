@@ -66,14 +66,7 @@ class Mango(Command):
             return -2
 
         def see():
-            with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
-                cur = con.cursor()
-                # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
-                res = cur.execute(f"SELECT mango FROM mango WHERE user = {context.author.id}")
-                res = res.fetchone()
-
-            usMangos = 0
-            if res is not None: usMangos = res[0]
+            usMangos = self.bot.getMangoBalance(context.author.id)
 
             mangoes = self.bot.readJSONFrom(MANGO_FILE)
 
