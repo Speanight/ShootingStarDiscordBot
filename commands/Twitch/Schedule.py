@@ -57,10 +57,10 @@ class Schedule(Command):
         if schedule['vacation'] is None or int \
                 (self.bot.getDateTime(schedule['vacation']['end_time']).timestamp()) < int(datetime.now().timestamp()):
             for i in schedule['segments']:
-                if not perWeek or int(self.bot.getDateTime(i['start_time']).timestamp()) < \
+                if (not perWeek or int(self.bot.getDateTime(i['start_time']).timestamp()) < \
                         (datetime.now() + timedelta(days=(7 - datetime.now().weekday()))).replace(hour=0, minute=0,
                                                                                                  second=0,
-                                                                                                 microsecond=0).timestamp():
+                                                                                                 microsecond=0).timestamp()) and i['canceled_until'] is None:
                     msg += '- '
                     if i['is_recurring']: msg += '🔁'
                     msg += f"<t:{int(self.bot.getDateTime(i['start_time']).timestamp())}:f> | **{i['category']['name']}**: {i['title']}\n"
