@@ -42,5 +42,5 @@ class Help(Command):
                     f"❌ <@{context.author.id}>, I do not recognize `{args[0]}` as one of my commands!")
                 return
 
-        embed = self.bot.getDefaultEmbed(f"Help - {args[0]}", msg, context.author)
+        embed = self.bot.getDefaultEmbed(f"Help - {command.__class__.__name__}", msg, context.author)
         await context.channel.send(embed=embed)

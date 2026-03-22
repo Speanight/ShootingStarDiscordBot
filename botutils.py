@@ -10,7 +10,7 @@ MANGO_FILE = "jsons/mango.json"
 CRON_LOGS = "logs/cronlog.json"
 
 DB_FOLDER = 'db/'
-VERSION = "1.1.1b0"
+VERSION = "1.1.2"
 
 ##### COMMANDS UTILS #####
 COMMAND_ADD = ["add", "adds", "new", "+"]
@@ -157,16 +157,6 @@ class Command:
                 continue
         return None
 
-    @staticmethod
-    def TryParseDateTime(s):
-        formats = ['%d/%m/%Y.%H:%M', '%d/%m/%Y-%H:%M']
-        for format in formats:
-            try:
-                return datetime.strptime(s, format)
-            except ValueError:
-                continue
-        return None
-
     def lexemize(self, message):
         QUOTES = ("\"", "„", "”", "“", "”", "'", "```")
         parsedInput, lexemes = [], []
@@ -199,8 +189,8 @@ class Command:
             elif Command.TryParseDate(word) != None:
                 parsedInput.append(Command.TryParseDate(word))
                 lexemes.append(Lexeme.DATE)
-            elif Command.TryParseDateTime(word) != None:
-                parsedInput.append(Command.TryParseDateTime(word))
+            elif word.startswith("<t:") and word[3:-3].isnumeric() and word.endswith(">"):
+                parsedInput.append(datetime.fromtimestamp(int(word[3:-3])))
                 lexemes.append(Lexeme.DATETIME)
             # role, mention or channel
             elif word.startswith("<@&") and word[3:-1].isnumeric() and word.endswith(">"):
@@ -364,8 +354,9 @@ class Bot(discord.Client):
                               description=description,
                               colour=color,
                               timestamp=datetime.now())
-        embed.set_author(name=user.display_name,
-                         icon_url=user.avatar)
+        if user is not None:
+            embed.set_author(name=user.display_name,
+                            icon_url=user.avatar)
         embed.set_footer(text=f"Version {VERSION}",
                          icon_url="attachment://BotPFP.png")
         return embed
