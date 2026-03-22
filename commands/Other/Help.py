@@ -37,10 +37,12 @@ class Help(Command):
                 if command.aliases:
                     msg += f"**Aliases:**\n"
                     msg += '\n'.join(f"- !{aliases}" for aliases in command.aliases)
+
+                args[0] = command.__class__.__name__
             else:
                 await context.channel.send(
                     f"❌ <@{context.author.id}>, I do not recognize `{args[0]}` as one of my commands!")
                 return
 
-        embed = self.bot.getDefaultEmbed(f"Help - {command.__class__.__name__}", msg, context.author)
+        embed = self.bot.getDefaultEmbed(f"Help - {args[0]}", msg, context.author)
         await context.channel.send(embed=embed)
