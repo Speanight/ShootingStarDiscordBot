@@ -122,7 +122,7 @@ class Quote(Command):
             elif action in COMMAND_UPDATE:
                 # Modify a quote:
                 quote = getQuoteById(info)
-                if quote['author'] == context.author.id or quote['owner'] == context.author.id or AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.STAFF:
+                if quote['author'] == context.author.id or quote['owner'] == context.author.id or AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.STAFF.value:
                     if user is not None:
                         quote["author"] = user.name
                     if timestamp is not None:
@@ -130,6 +130,8 @@ class Quote(Command):
 
                     quotes.remove(quote)
                     quotes.append(quote)
+
+                    self.bot.writeJSONTo('jsons/quotes.json', quotes)
 
                     await context.channel.send(f"✅ Quote #{quote['id']} successfully updated!")
                     return
