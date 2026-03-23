@@ -48,8 +48,11 @@ class Quote(Command):
 
             quote = quotes[rnd]
             msg = f'> "{quote["text"]}"'
-            if quote["author"] is not None: u = self.bot.get_user(quote["author"])
-            else: u = context.author
+            if quote["author"] is not None: u = discord.utils.get(self.bot.guild.members, name=quote["author"])
+            else: u = None
+
+            if quote["timestamp"] is not None: msg += f"\n\n <t:{quote['timestamp']}:F> (<t:{quote['timestamp']}:R>)"
+
 
             embed = self.bot.getDefaultEmbed(f"📑 Quote #{quote['id']}", msg, u)
 
@@ -62,7 +65,7 @@ class Quote(Command):
             quote = getQuoteById(action)
             if quote is None: return
             if quote["author"] is not None: u = discord.utils.get(self.bot.guild.members, name=quote["author"])
-            else: u = context.author
+            else: u = None
 
             msg = f'> "{quote["text"]}"'
 
