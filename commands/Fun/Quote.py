@@ -145,7 +145,7 @@ class Quote(Command):
                 # Removes a quote
                 quote = getQuoteById(info)
 
-                if quote['author'] == context.author.id or quote['owner'] == context.author.id or AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.STAFF:
+                if quote['author'] == context.author.id or quote['owner'] == context.author.id or AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.STAFF.value:
                     quotes.remove(quote)
                     quotes[0]["amtQuotes"] -= 1
                     self.bot.writeJSONTo('jsons/quotes.json', quotes)
