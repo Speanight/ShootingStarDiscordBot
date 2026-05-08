@@ -44,6 +44,8 @@ class Gamble(Command):
         elif betsOn != color:
             amount = -amount
 
+        elif betsOn == color:
+            amount = amount
 
         else:
             await context.channel.send(f"❌ Sorry, I didn't understand that. Your bet should be 'red', 'black', or a number between 0 and 36.")
