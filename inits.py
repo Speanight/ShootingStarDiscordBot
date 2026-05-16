@@ -42,6 +42,14 @@ def initDB(name):
                         user INTEGER PRIMARY KEY,
                         bday DATE NOT NULL)""")
 
+        cur.execute("""CREATE TABLE IF NOT EXISTS suggestion (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user INTEGER NOT NULL,
+                        message INTEGER NOT NULL,
+                        status SHORT INTEGER NOT NULL DEFAULT 0,
+                        mod INTEGER
+                        )""")
+
         # cur.execute("""CREATE TABLE IF NOT EXISTS QTCounter (
         #                 cuteCaller INTEGER NOT NULL,
         #                 cuteCallee INTEGER NOT NULL

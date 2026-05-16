@@ -84,6 +84,18 @@ class Starcron(Bot):
         now = datetime.now()
         self.logs = self.readJSONFrom(CRON_LOGS)
 
+        # Removes old logs in logs file to avoid big file:
+        toDelete = []
+        for i in self.logs:
+            day = datetime.strptime(i, "%Y-%m-%d")
+            if day <= datetime.now() - timedelta(days=self.settings["logs"]["keepFor"]["value"]):
+                toDelete.append(i)
+
+        for i in toDelete:
+            self.logs.pop(i)
+
+        print("Logs file cleaned!")
+
         logs = {
             "tasks": [],
             "version": VERSION,

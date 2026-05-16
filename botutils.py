@@ -10,13 +10,13 @@ MANGO_FILE = "jsons/mango.json"
 CRON_LOGS = "logs/cronlog.json"
 
 DB_FOLDER = 'db/'
-VERSION = "1.1.2"
+VERSION = "1.2.0"
 
 ##### COMMANDS UTILS #####
 COMMAND_ADD = ["add", "adds", "new", "+"]
 COMMAND_RM = ["remove", "rm", "rem", "delete", "del", "-"]
 COMMAND_LIST = ["list", "ls", "="]
-COMMAND_PREVIEW = ["preview", "view", "watch", "see", "pv", "pw", "info", "?"]
+COMMAND_PREVIEW = ["preview", "view", "watch", "see", "pv", "pw", "info"]
 COMMAND_UPDATE = ["update", "up", "#"]
 COMMAND_HELP = ["help", "?"]
 
