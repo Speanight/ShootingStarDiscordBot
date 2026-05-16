@@ -3,7 +3,16 @@ import sqlite3
 
 
 class Mango(Command):
-    description = ""
+    description = (
+                f"Welcome to the mango game! <: Every single day, mangoes will be added to the public area, notified by a message! 🥭\n"
+
+                f"To start things off, you can **claim public mangoes** with `!mango claim`.\n"
+                f"You can **give mangoes to others** if you're feeling generous by typing `!mango give @user`!\n"
+                f"You can **release a mango in the public** area for everyone else to grab with `!mango let`.\n"
+                f"You can **check your mango balance** (and how many there are in public) with `!mango see`!\n"
+                f"And finally, you can **check the leaderboard** with `!mango leaderboard`!\n\n"
+
+                f"Have fun grabbing those mangoes!")
     authorizationLevel = AuthorizationLevel.MEMBER
     syntax = [[], [Lexeme.ACTION], [Lexeme.TEXT], [Lexeme.TEXT, Lexeme.USER], [Lexeme.ACTION, Lexeme.USER, Lexeme.INT]]
 
@@ -90,7 +99,7 @@ class Mango(Command):
                     res = res[3:]
                     place = 4
                     for i in res:
-                        msg += f"{place}th: **<@{i[0]}>** with {i[1]} mangoes. 🥭\n"
+                        msg += f"{place}th: **<@{i[0]}>** with **{i[1]}** mangoes. 🥭\n"
                         place += 1
 
                 return msg

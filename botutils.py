@@ -1,5 +1,3 @@
-# MIT Licence
-# authors: Luna and Yashn
 import asyncio
 import pkgutil
 
