@@ -6,6 +6,7 @@ BIRTHDAYS_FILE = "jsons/birthdays.json"
 PRIVILEGED_FILE = "jsons/privileged.json"
 MANGO_FILE = "jsons/mango.json"
 CRON_LOGS = "logs/cronlog.json"
+GAMES_FILE = "jsons/games.json"
 
 DB_FOLDER = 'db/'
 VERSION = "1.2.0"

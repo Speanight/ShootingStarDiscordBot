@@ -2,12 +2,9 @@
 # authors: Luna
 
 import logging
-import random
-from datetime import timedelta
 from inits import *
 from discord.ext import tasks
 from discord.utils import get
-import os
 
 from botutils import *
 
@@ -62,7 +59,6 @@ class ShootingStar(Bot):
                 newActions.append(i)
 
         self.writeJSONTo('jsons/modactions.json', newActions)
-
 
     # TODO: https://discordpy.readthedocs.io/en/stable/api.html?highlight=reaction#discord.on_reaction_add
     # Checks twitch status.
@@ -139,15 +135,26 @@ class ShootingStar(Bot):
 
     async def on_message(self, message):
         await self.wait_until_ready()
-        # Snow Pearl doesn't answer to its own messages or empty messages
         if message.author == self.user or message.content == "": return
 
         # is message trying to call an existing command?
         cmd = self.getCommand(message)
         if cmd is not None:
             await cmd.ParseAndTrySafeRun(self, message)
+        else:
+            # Check if message is in a game session:
+            games = self.readJSONFrom(GAMES_FILE)
+            if str(message.channel) in games["sessions"]:
+                await self.gameHandler(message, games["sessions"][str(message.channel)])
 
-        # For custom reactions to messages, add else: condition and check message content.
+
+    ##################
+    # GAMES HANDLING #
+    ##################
+    async def gameHandler(self, message, session):
+        pass
+        # TODO: Game handler for type racer. Think for future updates as well.
+
 
     ####################
     # EVENT FUNCTIONS  #
@@ -221,29 +228,6 @@ class ShootingStar(Bot):
                                                  f"User changed their display name: **{member_old.name} -> {member_new.name}**",
                                                  member_new, discord.Colour.gold())
                 await self.settings['logs']['channel']['value'].send(embed=embed)
-
-    ####################
-    # USEFUL FUNCTIONS #
-    ####################
-    # send a list of string in channel as separate messages. Messages starting with ./images/ are treated like files
-    async def send_all(self, channel, texts):
-        for text in texts:
-            if text.startswith("./images/"):
-                try:
-                    with open(text, 'rb') as file:
-                        await channel.send(file=discord.File(file))
-                except FileNotFoundError:
-                    continue
-            else:
-                await channel.send(text)
-
-    # returns true iif all elements in l are in content
-    def all_in(self, content, l):
-        return all([True if element in content else False for element in l])
-
-    # returns true if any element in l is in content
-    def any_in(self, content, l):
-        return any([True if element in content else False for element in l])
 
 
 if __name__ == "__main__":

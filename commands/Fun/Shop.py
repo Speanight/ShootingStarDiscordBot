@@ -9,7 +9,7 @@ class Shop(Command):
                    "to gamble them away and get more than what you initially had, and now you want to spend them?\n"
                    "Well, the shop is here exactly for this reason!")
     authorizationLevel = AuthorizationLevel.MEMBER
-    syntax = [[], [Lexeme.ACTION, Lexeme.ROLE], [Lexeme.INT]]
+    syntax = [[], [Lexeme.INT]]
 
     async def claimReward(self, item, user):
         match item.reward:
@@ -45,8 +45,8 @@ class Shop(Command):
             toBuy, alreadyBought = "", ""
 
             for id, item in shop.items():
-                temp = f"- {item.emoji} **{item.name} [ID: {item.id}]:** {item.price}\n"
-                if context.author.id in purchases and id in purchases[context.author.id]:
+                temp = f"- {item.emoji} **{item.name} [ID: {item.id}]:** {item.price}  🥭\n"
+                if str(context.author.id) in purchases and id in purchases[str(context.author.id)]:
                     alreadyBought += temp
                 else:
                     toBuy += temp
@@ -67,7 +67,7 @@ class Shop(Command):
             if item not in shop:
                 message = "❌ This item doesn't exist in the shop!"
 
-            elif context.author.id in purchases and item in purchases[context.author.id]:
+            elif str(context.author.id) in purchases and item in purchases[str(context.author.id)]:
                 message = "❗ You already bought this item!"
 
             else:
@@ -79,9 +79,9 @@ class Shop(Command):
                         cur.execute(f"UPDATE mango SET mango = ? WHERE user = ?", (mangoes-shop[item].price, context.author.id))
                     message = f"✅ You successfully bought {shop[item].name}!"
                     # Add item to list of items bought:
-                    if context.author.id not in purchases:
-                        purchases[context.author.id] = []
-                    purchases[context.author.id].append(shop[item].id)
+                    if str(context.author.id) not in purchases:
+                        purchases[str(context.author.id)] = []
+                    purchases[str(context.author.id)].append(shop[item].id)
                     self.bot.writeJSONTo(SHOP_PURCHASES, purchases)
 
                     # Add reward if exists:
@@ -92,7 +92,3 @@ class Shop(Command):
                     message = "❗ You don't have enough mangoes to buy this item!"
 
             await context.channel.send(message)
-
-        # Mod wants to add something in the shop:
-        elif len(args) == 2 and AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.STAFF.value:
-            pass
