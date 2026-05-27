@@ -60,6 +60,9 @@ class ShootingStar(Bot):
 
         self.writeJSONTo('jsons/modactions.json', newActions)
 
+    async def on_reaction_add(self, reaction, user):
+        pass
+
     # TODO: https://discordpy.readthedocs.io/en/stable/api.html?highlight=reaction#discord.on_reaction_add
     # Checks twitch status.
     @tasks.loop(minutes=10)
@@ -144,17 +147,15 @@ class ShootingStar(Bot):
         else:
             # Check if message is in a game session:
             games = self.readJSONFrom(GAMES_FILE)
-            if str(message.channel) in games["sessions"]:
+            if str(message.channel.id) in games["sessions"]:
                 await self.gameHandler(message, games["sessions"][str(message.channel)])
 
 
-    ##################
-    # GAMES HANDLING #
-    ##################
-    async def gameHandler(self, message, session):
-        pass
-        # TODO: Game handler for type racer. Think for future updates as well.
+    async def on_reaction_add(self, reaction, user):
+        if user == self.user: return # Ignore if reaction added by bot itself.
 
+        # Check if reaction is within a game session:
+        await self.gameHandler.reactionHandler(reaction, user)
 
     ####################
     # EVENT FUNCTIONS  #
@@ -233,5 +234,5 @@ class ShootingStar(Bot):
 if __name__ == "__main__":
     star = ShootingStar()
 
-    star.run(getEnv('SHOOTINGSTAR_TOKEN'), log_handler=logging.FileHandler(filename='shootingstar.log', encoding='utf-8',
+    star.run(getEnv('SHOOTINGSTAR_TOKEN'), log_handler=logging.FileHandler(filename='logs/shootingstar.log', encoding='utf-8',
                                                                  mode='w')) #, log_level=logging.DEBUG)

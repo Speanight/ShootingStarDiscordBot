@@ -165,4 +165,4 @@ class Starcron(Bot):
 
 if __name__ == "__main__":
     sc = Starcron()
-    sc.run(getEnv('SHOOTINGSTAR_TOKEN'), log_handler=logging.FileHandler(filename='starcron.log', encoding='utf-8', mode='w'), log_level=logging.DEBUG)
+    sc.run(getEnv('SHOOTINGSTAR_TOKEN'), log_handler=logging.FileHandler(filename='logs/starcron.log', encoding='utf-8', mode='w'), log_level=logging.DEBUG)

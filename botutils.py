@@ -42,6 +42,8 @@ import importlib
 import inspect
 import commands
 
+from games.GameHandler import *
+
 
 class ModActions(Enum):
     WARN = 1
@@ -305,6 +307,7 @@ class Bot(discord.Client):
         self.commands = {}
         self.aliases = {}
         self.guild = None
+        self.gameHandler = GameHandler(self)
 
         # Checks the commands in the 'commands' folder recursively:
         for module_info in pkgutil.walk_packages(commands.__path__, commands.__name__ + "."):
@@ -454,7 +457,6 @@ class Bot(discord.Client):
     def updateMangoCount(self, user, count, add=True):
         with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
             cur = con.cursor()
-            # Command that gives a value 'birthday' equal to amount of days before their bday comes. If bday is past, adds 1 to year (with the CASE section). Used to order them in "coming order"
             res = cur.execute(f"SELECT mango FROM mango WHERE user = ?", (user,))
             res = res.fetchone()
 

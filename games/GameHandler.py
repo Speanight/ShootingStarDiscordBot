@@ -1,0 +1,87 @@
+from Objects.GameSession import *
+from botutils import *
+from games import TypeRacer
+from games.TypeRacer import *
+import asyncio
+
+
+class GameHandler:
+    def __init__(self, bot):
+        self.bot = bot
+        # Init. all existing games:
+        self.games = {GameType.TYPERACER.value: TypeRacer()}
+        self.defaultBet = 10
+
+        # Init. all ongoing game sessions:
+        self.gameSessions = {}
+        print(f'Obtaining list of ongoing games...')
+        jsonGames = self.bot.readJSONFrom(GAMES_FILE)
+        for channel, game in jsonGames.items():
+            if game["game"] in self.games:
+                self.gameSessions[channel] = GameSession(self.bot, self.games[game["game"]], game["users"], game["bet"], channel, game["started"])
+            else:
+                print(f"No game found with ID: {game['game']}! Game session in channel ID {channel} will be ignored.")
+
+    def getGame(self, game):
+        if game in self.games:
+            return self.games[game]
+
+        if game in ["typeracer", "type", "race", "typeracing", "10fastfingers"]:
+            return self.games[GameType.TYPERACER]
+
+        return None
+
+
+    def addSession(self, session):
+        self.gameSessions[session.thread.id] = session
+
+    async def removeSession(self, session):
+        del self.gameSessions[session.thread.id]
+        await session.thread.edit(locked=True, archived=True)
+
+
+    async def gameHandler(self, message, session):
+        if session["game"] == GameType.TYPERACER:
+            if message.author.id in session["users"]:
+                if message.content == session["values"]:
+                    session["users"].remove(message.author)
+                    self.updateMangoCount(message.author.id, session["bet"], add=True)
+                    self.updateMangoCount(session["users"][0], -session["bet"], add=False)
+
+                    await message.channel.send(f"{message.author.id} won the Type racer game! They will gain {2*session["bet"]} mangoes!")
+
+
+    async def reactionHandler(self, reaction, user):
+        # Check if reaction is for a game session:
+        if reaction.message.id not in self.gameSessions: return None
+        game = self.gameSessions[reaction.message.id]
+
+        # Check if reaction is to ready up:
+        if reaction.emoji == "✅" and not game.started:
+            # Check that user isn't already registered:
+            if user in game.users:
+                await game.thread.send(f"<@{user.id}>, you are already participating!")
+                return
+            # Check if game can still accept people:
+            if len(game.users) <= game.game.maxPlayers:
+                if self.bot.getMangoBalance(user.id) >= game.bet:
+                    game.users.append(user)
+                    await game.thread.send(f"✅ <@{user.id}>, I have successfully added you to the session!")
+                else:
+                    await game.thread.send(f"🥭 You don't have enough mangoes to participate, <@{user.id}>! The bet is currently at {game.bet}.")
+            else:
+                await game.thread.send(f"❌ I'm sorry <@{user.id}>, but the game already has the maximum amount of people in it!")
+
+            if game.users == game.game.maxPlayers:
+                await game.thread.send(f"🔒 This game session reached the maximum amount of people! The game will start shortly...")
+                await asyncio.sleep(1)
+                await game.game.start(game)
+
+            # Format them for JSON format:
+            sessions = {}
+
+            for i, j in self.gameSessions.items():
+                sessions[i] = j.toJson()
+            self.bot.writeJSONTo(GAMES_FILE, sessions)
+            return True
+        return False
