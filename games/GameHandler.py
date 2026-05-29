@@ -1,6 +1,7 @@
 from Objects.GameSession import *
 from botutils import *
 from games import TypeRacer
+from games.TicTacToe import TicTacToe
 from games.TypeRacer import *
 import asyncio
 
@@ -9,18 +10,14 @@ class GameHandler:
     def __init__(self, bot):
         self.bot = bot
         # Init. all existing games:
-        self.games = {GameType.TYPERACER.value: TypeRacer()}
+        self.games = {
+            GameType.TYPERACER.value: TypeRacer(),
+            GameType.TICTACTOE.value: TicTacToe()
+        }
         self.defaultBet = 10
 
         # Init. all ongoing game sessions:
         self.gameSessions = {}
-        print(f'Obtaining list of ongoing games...')
-        jsonGames = self.bot.readJSONFrom(GAMES_FILE)
-        for channel, game in jsonGames.items():
-            if game["game"] in self.games:
-                self.gameSessions[channel] = GameSession(self.bot, self.games[game["game"]], game["users"], game["bet"], channel, game["started"])
-            else:
-                print(f"No game found with ID: {game['game']}! Game session in channel ID {channel} will be ignored.")
 
     def getGame(self, game):
         if game in self.games:
@@ -40,15 +37,18 @@ class GameHandler:
         await session.thread.edit(locked=True, archived=True)
 
 
-    async def gameHandler(self, message, session):
-        if session["game"] == GameType.TYPERACER:
-            if message.author.id in session["users"]:
-                if message.content == session["values"]:
-                    session["users"].remove(message.author)
-                    self.updateMangoCount(message.author.id, session["bet"], add=True)
-                    self.updateMangoCount(session["users"][0], -session["bet"], add=False)
+    async def messageHandler(self, message):
+        if message.channel.id not in self.gameSessions: return None # Not in a game channel
 
-                    await message.channel.send(f"{message.author.id} won the Type racer game! They will gain {2*session["bet"]} mangoes!")
+        game = self.gameSessions[message.channel.id]
+        # Check that user participates in the game:
+        if message.author in game.users:
+            if await game.game.handleMessage(game, message):
+                # A user won: close session.
+                await self.removeSession(game)
+        else: return False # From user not participating
+
+        return True # Handled correctly.
 
 
     async def reactionHandler(self, reaction, user):
@@ -77,11 +77,5 @@ class GameHandler:
                 await asyncio.sleep(1)
                 await game.game.start(game)
 
-            # Format them for JSON format:
-            sessions = {}
-
-            for i, j in self.gameSessions.items():
-                sessions[i] = j.toJson()
-            self.bot.writeJSONTo(GAMES_FILE, sessions)
             return True
         return False

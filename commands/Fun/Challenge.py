@@ -15,7 +15,6 @@ class Challenge(Command):
     aliases = ["game", "gaming", "games", "challonge", "challenges", "versus", "vs"]
 
     async def run(self, context, args):
-        games = self.bot.readJSONFrom(GAMES_FILE)
         game, bet = (args + [None] * 2)[:2]
 
         # If user wants a list of available games:
@@ -37,32 +36,30 @@ class Challenge(Command):
 
         if bet is None or bet == 0: bet = self.bot.gameHandler.defaultBet
 
-        message = await context.channel.send(f"**{context.author.name}** is starting a **{game.name}** challenge with a bet of **{bet}**!")
-        thread = await message.create_thread(name=f"{game.name} challenge! [Bet: {bet} 🥭]")
+        if bet > self.bot.getMangoBalance(context.author.id):
+            await context.channel.send(f"You don't have enough mangoes to start a game session with this bet!")
+            return
+
+        message = await context.channel.send(f"**{context.author.display_name}** is starting a **{game.name}** challenge with a bet of **{bet}**!"
+                                             f"\nYou can join the game by reacting :white_check_mark: to this message!")
+        thread = await message.create_thread(name=f"{context.author.display_name}s {game.name} challenge! [Bet: {bet} 🥭]")
 
         # Add new entry in games:
         session = GameSession(self.bot, game, [context.author.id], bet, thread.id)
-        games[str(thread.id)] = session.toJson()
-        self.bot.writeJSONTo(GAMES_FILE, games)
         self.bot.gameHandler.addSession(session)
         await message.add_reaction('✅')
 
         # Waits for people to ready up.
         await asyncio.sleep(JOIN_DELAY)
 
-        games = self.bot.readJSONFrom(GAMES_FILE) # Refreshes json to get latest infos
-        currSess = games[str(thread.id)]
-        session = GameSession(self.bot, game, currSess["users"], currSess["bet"], thread.id)
+        session = self.bot.gameHandler.gameSessions[thread.id]
         # Check if game has already been started (amount of people met)
         if session.started: return
 
         # Else, we start manually at end of timer.
         session.started = True
-        games[str(thread.id)]["started"] = True
 
         # If game doesn't start because of lack of players, we delete it.
         if not await game.start(session):
-            del games[str(thread.id)]
+            await message.edit(content=f"The **{game.name}** session has been canceled due to lack of players!")
             await self.bot.gameHandler.removeSession(session)
-
-        self.bot.writeJSONTo(GAMES_FILE, games)

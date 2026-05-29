@@ -16,6 +16,7 @@ class GameSession:
         self.bet = bet
         self.started = started
 
+        self.values = {} # Will be used by game to keep track of what happened.
 
     def toJson(self):
         return {

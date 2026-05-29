@@ -146,9 +146,7 @@ class ShootingStar(Bot):
             await cmd.ParseAndTrySafeRun(self, message)
         else:
             # Check if message is in a game session:
-            games = self.readJSONFrom(GAMES_FILE)
-            if str(message.channel.id) in games["sessions"]:
-                await self.gameHandler(message, games["sessions"][str(message.channel)])
+            await self.gameHandler.messageHandler(message)
 
 
     async def on_reaction_add(self, reaction, user):
