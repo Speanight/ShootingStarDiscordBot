@@ -24,7 +24,9 @@ class GameHandler:
             return self.games[game]
 
         if game in ["typeracer", "type", "race", "typeracing", "10fastfingers"]:
-            return self.games[GameType.TYPERACER]
+            return self.games[GameType.TYPERACER.value]
+        if game in ["tictactoe", "ttt", "tripleT"]:
+            return self.games[GameType.TICTACTOE.value]
 
         return None
 
@@ -72,7 +74,7 @@ class GameHandler:
             else:
                 await game.thread.send(f"❌ I'm sorry <@{user.id}>, but the game already has the maximum amount of people in it!")
 
-            if game.users == game.game.maxPlayers:
+            if len(game.users) == game.game.maxPlayers:
                 await game.thread.send(f"🔒 This game session reached the maximum amount of people! The game will start shortly...")
                 await asyncio.sleep(1)
                 await game.game.start(game)

@@ -16,7 +16,7 @@ from Objects import Log, LogStatus
 
 class Starcron(Bot):
     # Gets users that celebrate their birthday today
-    def CheckBirthdays(self):
+    async def CheckBirthdays(self):
         def convertSQLiteTimeToDatetime(rawDate):
             return datetime.strptime(rawDate[0:10], '%Y-%m-%d')
 
@@ -43,7 +43,7 @@ class Starcron(Bot):
             msg += "! I've given you 5 mangoes to celebrate.\n"
 
             # Give mangoes for birthday
-            self.updateMangoCount(i[0], count=self.settings['mango']['birthdayReward']['value'])
+            await self.updateMangoCount(i[0], count=self.settings['mango']['birthdayReward']['value'])
 
         return msg
 
@@ -117,7 +117,7 @@ class Starcron(Bot):
             log = Log("Checking birthdays")
             if self.settings['birthday']['enable']['value'] and self.settings['birthday']['channel']['value'] is not None:
                 try:
-                    msg = self.CheckBirthdays()
+                    msg = await self.CheckBirthdays()
                 except Exception as e:
                     msg = None
                     log.status = LogStatus.ERROR

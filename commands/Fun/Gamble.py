@@ -51,7 +51,7 @@ class Gamble(Command):
             await context.channel.send(f"❌ Sorry, I didn't understand that. Your bet should be 'red', 'black', or a number between 0 and 36.")
             return
 
-        mangoes = self.bot.updateMangoCount(context.author.id, amount)
+        mangoes = await self.bot.updateMangoCount(context.author.id, amount)
 
 
         if amount == 0: msg = "You just gambled 0 mangoes! D:"

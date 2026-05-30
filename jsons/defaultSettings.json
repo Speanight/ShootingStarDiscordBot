@@ -20,6 +20,11 @@
         "value": null,
         "type": "!CHANNEL",
         "description": "Defines the channel in which suggestions will be sent. If None, suggestion command won't work!"
+      },
+      "game": {
+        "value": null,
+        "type": "!CHANNEL",
+        "description": "Defines the channel in which game sessions will be accepted. If set to none, users can start games in the channel they want."
       }
     }
   },
@@ -75,6 +80,11 @@
       "value": 5,
       "type": "INT",
       "description": "Defines how many mangoes will be given on someone's birthday."
+    },
+    "role": {
+      "value": null,
+      "type": "!ROLE",
+      "description": "Defines if the user with the most mangoes should have a role given to him or not."
     }
   },
   "newcomers": {

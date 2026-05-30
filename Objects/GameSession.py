@@ -29,9 +29,9 @@ class GameSession:
     async def handleWinner(self, winner : discord.Member):
         for i in self.users:
             if i == winner.id:
-                self.bot.updateMangoCount(winner, self.bet*(len(self.users)-1), True)
+                await self.bot.updateMangoCount(winner, self.bet*(len(self.users)-1), True)
             else:
-                self.bot.updateMangoCount(i, -self.bet, True)
+                await self.bot.updateMangoCount(i, -self.bet, True)
 
         # TODO: finish function
         await self.channel.send()

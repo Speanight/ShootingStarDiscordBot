@@ -2,7 +2,7 @@ from botutils import *
 from Objects.GameSession import *
 from random import randint
 
-JOIN_DELAY = 5 # seconds
+JOIN_DELAY = 10 # seconds
 
 class Challenge(Command):
     description = ("Do you want to compete against other members and bet some mangoes on some games? "
@@ -15,6 +15,12 @@ class Challenge(Command):
     aliases = ["game", "gaming", "games", "challonge", "challenges", "versus", "vs"]
 
     async def run(self, context, args):
+        # Check if game channel has been defined:
+        channel = self.bot.settings["defaultValues"]["channel"]["game"]["value"]
+        if channel is not None and channel != context.channel.id:
+            await context.channel.send(f"❌ You can only start game sessions in <#{channel}>!")
+            return
+
         game, bet = (args + [None] * 2)[:2]
 
         # If user wants a list of available games:
@@ -53,13 +59,8 @@ class Challenge(Command):
         await asyncio.sleep(JOIN_DELAY)
 
         session = self.bot.gameHandler.gameSessions[thread.id]
-        # Check if game has already been started (amount of people met)
         if session.started: return
-
-        # Else, we start manually at end of timer.
-        session.started = True
-
         # If game doesn't start because of lack of players, we delete it.
-        if not await game.start(session):
+        if await game.start(session) is None:
             await message.edit(content=f"The **{game.name}** session has been canceled due to lack of players!")
             await self.bot.gameHandler.removeSession(session)

@@ -306,8 +306,10 @@ class Bot(discord.Client):
         # create dictionnary of name/commands defined here
         self.commands = {}
         self.aliases = {}
+
         self.guild = None
         self.gameHandler = GameHandler(self)
+        self.mangoTop = None
 
         # Checks the commands in the 'commands' folder recursively:
         for module_info in pkgutil.walk_packages(commands.__path__, commands.__name__ + "."):
@@ -454,7 +456,7 @@ class Bot(discord.Client):
 
         return mangoes
 
-    def updateMangoCount(self, user, count, add=True):
+    async def updateMangoCount(self, user, count, add=True):
         with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
             cur = con.cursor()
             res = cur.execute(f"SELECT mango FROM mango WHERE user = ?", (user,))
@@ -482,6 +484,22 @@ class Bot(discord.Client):
                 else:
                     mango = mango - count
                     return -1
+
+        # Check if need to give mango top role:
+        if self.settings["mango"]["role"]["value"] is not None:
+            role = self.guild.get_role(self.settings["mango"]["role"]["value"])
+            if len(role.members) == 0 or role.members[0] != self.mangoTop:
+                if len(role.members) != 0:
+                    await role.members[0].remove_roles(role)
+
+                with sqlite3.connect(f"{DB_FOLDER}{self.guild.id}") as con:
+                    cur = con.cursor()
+                    res = cur.execute(f"SELECT user FROM mango ORDER BY mango DESC LIMIT 1")
+                    res = res.fetchone()[0]
+
+                user = self.guild.get_member(res)
+                await user.add_roles(role)
+                self.mangoTop = user
 
         return mango
 

@@ -12,7 +12,7 @@ class Suggest(Command):
                    "in a channel, where people will be able to vote if they want to see your changes included or not!\n"
                    "Admins can mark suggestions as accepted, denied, 'to-do later' or as a report with !suggest <id> <yes/no/maybe/repost/copy>")
     authorizationLevel = AuthorizationLevel.MEMBER
-    syntax = [[Lexeme.TEXT], [Lexeme.INT, Lexeme.TEXT]]
+    syntax = [[Lexeme.TEXT], [Lexeme.INT, Lexeme.TEXT], [Lexeme.INT, Lexeme.ACTION]]
     aliases = ["suggestion", "sugg", "sug", "suggests", "want", "wanties"]
 
     def addToDb(self, msg, user):
@@ -33,6 +33,15 @@ class Suggest(Command):
             msgId = cur.fetchone()
 
         return msgId[0]
+
+    def removeDb(self, id):
+        with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
+            cur = con.cursor()
+            cur.execute("SELECT message FROM suggestion WHERE id = ?", (id,))
+            msgId = cur.fetchone()
+            cur.execute("DELETE FROM suggestion WHERE id = ?", (id,))
+
+            return msgId[0]
 
     async def run(self, context, args):
         channel = self.bot.settings["defaultValues"]["channel"]["suggestion"]["value"]
@@ -58,12 +67,22 @@ class Suggest(Command):
             await msg.edit(embed=embed)
             await msg.add_reaction('👍')
             await msg.add_reaction('👎')
-            await msg.create_thread(name=f"Suggestion discussion")
+            await msg.create_thread(name=f"Suggestion #{id} discussion")
+            await context.channel.send(f"I have successfully added your suggestion in: <#{channel.id}>")
 
         # Else, a mod is trying to edit a suggestion status:
         else:
             if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.STAFF.value:
                 suggestion, status = args[0], args[1]
+
+                # Check if user wants to remove suggestion:
+                if status in COMMAND_RM:
+                    msg = self.removeDb(suggestion)
+                    message = await channel.fetch_message(msg)
+
+                    await context.channel.send(f"I have successfully deleted the suggestion #{suggestion}!")
+                    await message.delete()
+                    return
 
                 # Check status wanted by admin:
                 if status in ["yes", "accept", "accepted", "accepts", "confirm"]:
@@ -75,7 +94,10 @@ class Suggest(Command):
                 elif status in ["repost", "re", "rep", "copy", "copycat", "ctrl+c"]:
                     st = SUGGEST_REPOST
                 else:
-                    st = SUGGEST_AWAIT
+                    await context.channel.send(f"As a member of the staff team, you can change the suggestion status!\n"
+                                               f"The different status can be set by doing !suggest <id> <status> with "
+                                               f"the status being: 'accept', 'deny', 'todo', or 'repost'.")
+                    return
 
                 msgId = self.modifyDb(suggestion, context.author, st)
 

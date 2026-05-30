@@ -26,7 +26,7 @@ class Mango(Command):
         LEADERBOARD = ["?", "leaderboard", "ldb", "top", "who", "whobest" "ewe"]
 
         msg = "Something went wrong! Ohnoeees! Sorry I couldn't exhaust your wishes! :c"
-        def claim():
+        async def claim():
             mangos = self.bot.readJSONFrom(MANGO_FILE)
 
             if not mangos['mangos']:
@@ -46,29 +46,29 @@ class Mango(Command):
                 mangos['users'][userID] = {}
                 mangos['users'][userID]['count'] = 1
 
-            val = self.bot.updateMangoCount(context.author.id, +1)
+            val = await self.bot.updateMangoCount(context.author.id, +1)
 
             self.bot.writeJSONTo(MANGO_FILE, mangos)
 
             return val
 
-        def give():
+        async def give():
             if not pinged:
                 return -1
 
-            if self.bot.updateMangoCount(context.author.id, -1) >= 0:
-                if self.bot.updateMangoCount(pinged.id, 1):
+            if await self.bot.updateMangoCount(context.author.id, -1) >= 0:
+                if await self.bot.updateMangoCount(pinged.id, 1):
                     return 0
                 return -3
             return -2
 
-        def let():
+        async def let():
             mangos = self.bot.readJSONFrom(MANGO_FILE)
 
             if len(mangos['mangos']) == self.bot.settings['mango']['limit']['value']:
                 return -1
 
-            if self.bot.updateMangoCount(context.author.id, -1) >= 0:
+            if await self.bot.updateMangoCount(context.author.id, -1) >= 0:
                 mangos['mangos'].append({"delay": 0})
                 self.bot.writeJSONTo(MANGO_FILE, mangos)
                 return 0
@@ -105,7 +105,7 @@ class Mango(Command):
                 return msg
 
         if action in CLAIM:
-            val = claim()
+            val = await claim()
             if val == -2:
                 msg = f"Looks like there's no more mango in stock! :c"
             elif val == -1:
@@ -114,7 +114,7 @@ class Mango(Command):
                 msg = f"I just added 1 mango 🥭 to your account, <@{context.author.id}>! You now have {val} mango(s)!"
 
         elif action in GIVE:
-            val = give()
+            val = await give()
             if val == -3:
                 msg = f"❌ Something went wrong, but it shouldn't have... A mod will look into this!"
             elif val == -2:
@@ -125,7 +125,7 @@ class Mango(Command):
                 msg = f"<@{context.author.id}>, I just gave 1 mango to <@{pinged.id}>"
 
         elif action in LET:
-            val = let()
+            val = await let()
             if val == -2:
                 msg = f"⚫ You don't have any mango to release in public!"
             elif val == -1:
@@ -161,7 +161,7 @@ class Mango(Command):
             if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.PRIVILEGED.value:
                 if len(args) == 3:  count = args[2]
                 else:               count = 0
-                val = self.bot.updateMangoCount(pinged.id, count, False)
+                val = await self.bot.updateMangoCount(pinged.id, count, False)
 
                 msg = f"User <@{pinged.id}> now has {val} mango(es)!"
 
