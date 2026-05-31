@@ -9,7 +9,7 @@ CRON_LOGS = "logs/cronlog.json"
 GAMES_FILE = "jsons/games.json"
 
 DB_FOLDER = 'db/'
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 ##### COMMANDS UTILS #####
 COMMAND_ADD = ["add", "adds", "new", "+"]
