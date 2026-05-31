@@ -181,7 +181,7 @@ class ShootingStar(Bot):
         print(f"Getting the mango top user, if exists")
         if self.settings["mango"]["role"]["value"] is not None:
             role = self.guild.get_role(self.settings["mango"]["role"]["value"])
-            self.bot.mangoTop = role.members[0]
+            self.mangoTop = role.members[0]
 
         print(f'Starting repeated tasks...')
         self.messagePlanner.start()

@@ -1,6 +1,7 @@
 from Objects.GameSession import *
 from botutils import *
 from games import TypeRacer
+from games.ConnectFour import ConnectFour
 from games.TicTacToe import TicTacToe
 from games.TypeRacer import *
 import asyncio
@@ -12,7 +13,8 @@ class GameHandler:
         # Init. all existing games:
         self.games = {
             GameType.TYPERACER.value: TypeRacer(),
-            GameType.TICTACTOE.value: TicTacToe()
+            GameType.TICTACTOE.value: TicTacToe(),
+            GameType.CONNECTFOUR.value: ConnectFour()
         }
         self.defaultBet = 10
 
@@ -27,6 +29,8 @@ class GameHandler:
             return self.games[GameType.TYPERACER.value]
         if game in ["tictactoe", "ttt", "tripleT"]:
             return self.games[GameType.TICTACTOE.value]
+        if game in ["connectfour", "cf", "connect4", "connect-four", "connect-4", "c4"]:
+            return self.games[GameType.CONNECTFOUR.value]
 
         return None
 

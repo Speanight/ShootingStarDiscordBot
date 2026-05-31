@@ -6,6 +6,7 @@ import asyncio
 class GameType(Enum):
     TYPERACER = 1
     TICTACTOE = 2
+    CONNECTFOUR = 3
 
 
 class Game:
