@@ -28,7 +28,7 @@ class Mute(Command):
                 else:
                     reason = args[2]
 
-        id = self.bot.addModAction(context.author, user, ModActions.MUTE.value,
+        id = await self.bot.addModAction(context.author, user, ModActions.MUTE.value,
                                    reason + f" | {time['days']}d{time['hours']}h{time['minutes']}m")
         if id is not False:
             modactions = self.bot.readJSONFrom('jsons/modactions.json')

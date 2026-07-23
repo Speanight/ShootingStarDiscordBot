@@ -15,7 +15,7 @@ class Kick(Command):
 
         try:
             await user.kick(reason=reason)
-            if self.bot.addModAction(context.author, user, ModActions.KICK.value, reason):
+            if await self.bot.addModAction(context.author, user, ModActions.KICK.value, reason):
                 await context.channel.send(f"{args[0].display_name} has been successfully kicked!")
                 logChannel = self.bot.settings['logs']['channel']['value']
                 if logChannel is None: return

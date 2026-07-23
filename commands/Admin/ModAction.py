@@ -11,7 +11,7 @@ class ModAction(Command):
         "Update is used to change the reason (or pardonReason) for an action. If an action has been pardon'd, only the pardon reason can be changed.\n"
         "View is used to get all details about an action.")
     authorizationLevel = AuthorizationLevel.STAFF
-    syntax = [[Lexeme.ACTION, Lexeme.INT], [Lexeme.ACTION, Lexeme.INT, Lexeme.TEXT]]
+    syntax = [[Lexeme.ACTION, Lexeme.INT], [Lexeme.ACTION, Lexeme.INT, Lexeme.TEXT], [Lexeme.TEXT, Lexeme.INT]]
 
     async def run(self, context, args):
         # Function to remove a mod action. Set force to True to delete it, otherwise updates with pardon.

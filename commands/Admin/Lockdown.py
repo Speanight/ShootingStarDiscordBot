@@ -1,3 +1,4 @@
+from discord.utils import get
 from botutils import *
 
 class Lockdown(Command):
@@ -36,7 +37,7 @@ class Lockdown(Command):
             else:
                 # If adding user to lockdown mode:
                 if action in COMMAND_ADD:
-                    if self.bot.addModAction(context.author, user, ModActions.LOCKDOWN.value, reason):
+                    if await self.bot.addModAction(context.author, user, ModActions.LOCKDOWN.value, reason):
                         await user.remove_roles(get(self.bot.guild.roles, id=memberRoleID))
                         msg = "🔒 User has successfuly being lockdown'd!"
                     else:
