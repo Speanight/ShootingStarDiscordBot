@@ -19,7 +19,7 @@ class ModAction(Command):
             with sqlite3.connect(f"{DB_FOLDER}{self.bot.guild.id}") as con:
                 cur = con.cursor()
                 if force:
-                    cur.execute("DELETE FROM mod_log WHERE id = ?", (action['id']))
+                    cur.execute("DELETE FROM mod_log WHERE id = ?", (action['id'],))
                 else:
                     cur.execute("UPDATE mod_log SET pardon = ?, pardonTimestamp = ?, pardonReason = ? WHERE id = ?",
                                 (1, datetime.now(), action['pardonReason'], action['id']))
@@ -56,13 +56,13 @@ class ModAction(Command):
 
         # If moderator is not the one that took action, nor a privileged user:
         if context.author.id != action['mod'] and AuthorizationLevel.getMemberAuthorizationLevel(
-                context.author).value < AuthorizationLevel.PRIVILEGED:
+                context.author).value < AuthorizationLevel.PRIVILEGED.value:
             await context.channel.send(f"⚠️ You are not allowed to interact with this action!")
             return
 
         # If trying to force-remove the action
         if act in ["force-rm", "force", "F", "f", "frm", "force-remove"]:
-            if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.PRIVILEGED:
+            if AuthorizationLevel.getMemberAuthorizationLevel(context.author).value >= AuthorizationLevel.PRIVILEGED.value:
                 removeAction(action)  # Force remove the action (default)
                 msg = f"✅ <@{action['user']}>s {ModActions(action['action']).name} has been fully deleted!"
             else:
