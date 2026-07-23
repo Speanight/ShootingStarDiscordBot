@@ -29,7 +29,7 @@ class ConnectFour(Game):
         msg = (f"{self.drawBoard(session.values['board'])}\n\n"
                f"To play, just write the number of the column you want to drop your piece in!\n\n"
                f"{SIGNS[1]}: {session.users[0].display_name} / {SIGNS[2]}: {session.users[1].display_name}\n\n"
-               f"It is {session.users[session.values["playerTurn"]].display_name}'s turn!")
+               f"It is {session.users[session.values['playerTurn']].display_name}'s turn!")
 
         embed = discord.Embed(title=self.name, description=msg, color=0xa547c1)
         embed.set_footer(text=f"{session.users[0].display_name} vs {session.users[1].display_name} | Bet: {session.bet}")
